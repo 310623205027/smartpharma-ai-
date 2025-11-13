@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}Insights - SmartPharma AI{% endblock %}
+{% block page_title %}Insights & Analytics{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+        <div class="metric-card metric-primary animate__animated animate__fadeInUp">
+            <div class="metric-icon">
+                <i class="fas fa-recycle"></i>
+            </div>
+            <div class="metric-content">
+                <h3 id="wastePrevented">-</h3>
+                <p>Waste Prevented (kg)</p>
+            </div>
+        </div>
+
+        <div class="metric-card metric-success animate__animated animate__fadeInUp">
+            <div class="metric-icon">
+                <i class="fas fa-leaf"></i>
+            </div>
+            <div class="metric-content">
+                <h3 id="avgEcoScore">-</h3>
+                <p>Eco Score (/10)</p>
+            </div>
+        </div>
+
+        <div class="metric-card metric-warning animate__animated animate__fadeInUp">
+            <div class="metric-icon">
+                <i class="fas fa-fire"></i>
+            </div>
+            <div class="metric-content">
+                <h3 id="highDemandCount">-</h3>
+                <p>High Demand Products</p>
+            </div>
+        </div>
+
+        <div class="metric-card metric-danger animate__animated animate__fadeInUp">
+            <div class="metric-icon">
+                <i class="fas fa-hourglass-end"></i>
+            </div>
+            <div class="metric-content">
+                <h3 id="expiringCount">-</h3>
+                <p>Expiring Soon</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Insights Cards Row -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 1.5rem;">
+        <!-- Expiry Insights -->
+        <div class="section-card animate__animated animate__fadeInUp">
+            <div class="section-header">
+                <h3>
+                    <i class="fas fa-hourglass-end"></i> Expiring Soon (7 Days)
+                </h3>
+            </div>
+            <div id="expiryInsights">
+                <p class="text-muted">Loading...</p>
+            </div>
+        </div>
+
+        <!-- High Demand Products -->
+        <div class="section-card animate__animated animate__fadeInUp">
+            <div class="section-header">
+                <h3>
+                    <i class="fas fa-chart-bar"></i> High Demand Products
+                </h3>
+            </div>
+            <div id="demandInsights">
+                <p class="text-muted">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Packaging Analysis Table -->
+    <div class="section-card animate__animated animate__fadeInUp">
+        <div class="section-header">
+            <h3>
+                <i class="fas fa-box"></i> Packaging Analysis
+            </h3>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover" id="packagingTable">
+                <thead>
+                    <tr>
+                        <th>Packaging Type</th>
+                        <th>Count</th>
+                        <th>Avg Eco Score</th>
+                        <th>Rating</th>
+                    </tr>
+                </thead>
+                <tbody id="packagingAnalysis">
+                    <tr><td colspan="4" class="text-center text-muted">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .insight-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        border-left: 3px solid #667eea;
+        transition: all 0.3s ease;
+    }
+
+    .insight-item:hover {
+        background: #f0f2f5;
+        transform: translateX(4px);
+    }
+
+    .insight-name strong {
+        color: #333;
+        display: block;
+        margin-bottom: 0.25rem;
+        font-size: 0.95rem;
+    }
+
+    .insight-name small {
+        color: #999;
+        font-size: 0.85rem;
+    }
+
+    .insight-values {
+        text-align: right;
+    }
+
+    .insight-badge {
+        display: inline-block;
+        padding: 0.4rem 0.75rem;
+        border-radius: 1rem;
+        font-weight: 500;
+        font-size: 0.85rem;
+        color: white;
+        margin-bottom: 0.25rem;
+    }
+
+    .badge-warning {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+
+    .badge-success {
+        background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+    }
+
+    .rating-badge {
+        display: inline-block;
+        padding: 0.3rem 0.6rem;
+        border-radius: 0.25rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: white;
+    }
+
+    .rating-excellent {
+        background-color: #28a745;
+    }
+
+    .rating-good {
+        background-color: #17a2b8;
+    }
+
+    .rating-moderate {
+        background-color: #ffc107;
+        color: #333;
+    }
+
+    .rating-poor {
+        background-color: #dc3545;
+    }
+
+    .animate__animated {
+        animation-duration: 0.6s;
+    }
+
+    .animate__fadeInUp {
+        animation-name: fadeInUp;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translate3d(0, 30px, 0);
+        }
+        to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .metrics-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const mockData = {
+        waste_prevented_kg: 245.8,
+        avg_eco_score: 7.8,
+        demand_insights: [
+            { name: 'Paracetamol 500mg', category: 'Analgesic', predicted_demand: 850, current_stock: 400 },
+            { name: 'Ibuprofen 200mg', category: 'Anti-inflammatory', predicted_demand: 620, current_stock: 250 },
+            { name: 'Amoxicillin 250mg', category: 'Antibiotic', predicted_demand: 520, current_stock: 180 },
+            { name: 'Vitamin C 1000mg', category: 'Supplement', predicted_demand: 430, current_stock: 320 },
+            { name: 'Metformin 500mg', category: 'Diabetes', predicted_demand: 350, current_stock: 400 }
+        ],
+        expiry_insights: [
+            { name: 'Aspirin 75mg', category: 'Antiplatelet', days_left: 3, stock: 120 },
+            { name: 'Omeprazole 20mg', category: 'GI Care', days_left: 5, stock: 85 },
+            { name: 'Loratadine 10mg', category: 'Antihistamine', days_left: 6, stock: 200 }
+        ],
+        packaging_analysis: [
+            { packaging_type: 'Plastic', count: 45, avg_eco_score: 3.5 },
+            { packaging_type: 'Glass', count: 32, avg_eco_score: 7.5 },
+            { packaging_type: 'Cardboard', count: 28, avg_eco_score: 8.5 },
+            { packaging_type: 'Paper', count: 18, avg_eco_score: 8.0 },
+            { packaging_type: 'Biodegradable', count: 12, avg_eco_score: 9.5 }
+        ]
+    };
+
+    function getEcoRating(score) {
+        if (score >= 8.5) return { text: 'Excellent', badge: 'rating-excellent' };
+        if (score >= 7.5) return { text: 'Good', badge: 'rating-good' };
+        if (score >= 6.0) return { text: 'Moderate', badge: 'rating-moderate' };
+        return { text: 'Poor', badge: 'rating-poor' };
+    }
+
+    function loadInsights() {
+        // In production, replace this with:
+        // fetch('/api/insights')
+        //     .then(res => res.json())
+        //     .then(data => displayInsights(data))
+        //     .catch(err => console.error('Error:', err));
+        
+        displayInsights(mockData);
+    }
+
+    function displayInsights(data) {
+        document.getElementById('wastePrevented').textContent = (data.waste_prevented_kg || 0).toFixed(1);
+        document.getElementById('avgEcoScore').textContent = (data.avg_eco_score || 0).toFixed(1);
+        document.getElementById('highDemandCount').textContent = (data.demand_insights || []).length;
+        document.getElementById('expiringCount').textContent = (data.expiry_insights || []).length;
+
+        displayExpiryInsights(data.expiry_insights || []);
+        displayDemandInsights(data.demand_insights || []);
+        displayPackagingAnalysis(data.packaging_analysis || []);
+    }
+
+    function displayExpiryInsights(items) {
+        const container = document.getElementById('expiryInsights');
+
+        if (items.length === 0) {
+            container.innerHTML = '<p class="text-success">✓ No medicines expiring soon!</p>';
+            return;
+        }
+
+        let html = '';
+        items.slice(0, 6).forEach(item => {
+            html += `
+                <div class="insight-item">
+                    <div class="insight-name">
+                        <strong>${item.name || 'Unknown'}</strong>
+                        <small>${item.category || 'N/A'}</small>
+                    </div>
+                    <div class="insight-values">
+                        <span class="insight-badge badge-warning">${item.days_left || 0} days</span><br>
+                        <small class="text-muted">Stock: ${item.stock || 0}</small>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function displayDemandInsights(items) {
+        const container = document.getElementById('demandInsights');
+
+        if (items.length === 0) {
+            container.innerHTML = '<p class="text-muted">No demand data available</p>';
+            return;
+        }
+
+        let html = '';
+        items.slice(0, 6).forEach(item => {
+            html += `
+                <div class="insight-item">
+                    <div class="insight-name">
+                        <strong>${item.name || 'Unknown'}</strong>
+                        <small>${item.category || 'N/A'}</small>
+                    </div>
+                    <div class="insight-values">
+                        <span class="insight-badge badge-success">${item.predicted_demand || 0} units</span><br>
+                        <small class="text-muted">Current: ${item.current_stock || 0}</small>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function displayPackagingAnalysis(items) {
+        const container = document.getElementById('packagingAnalysis');
+
+        if (items.length === 0) {
+            container.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No packaging data</td></tr>';
+            return;
+        }
+
+        let html = '';
+        items.forEach(item => {
+            const ecoRating = getEcoRating(item.avg_eco_score || 0);
+            html += `
+                <tr>
+                    <td><strong>${item.packaging_type || 'Unknown'}</strong></td>
+                    <td><span class="badge bg-primary">${item.count || 0}</span></td>
+                    <td><strong>${(item.avg_eco_score || 0).toFixed(1)}/10</strong></td>
+                    <td><span class="rating-badge ${ecoRating.badge}">${ecoRating.text}</span></td>
+                </tr>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    document.addEventListener('DOMContentLoaded', loadInsights);
+    setInterval(loadInsights, 30000);
+</script>
+{% endblock %}

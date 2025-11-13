@@ -1,0 +1,607 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Counter - SmartPharma{% endblock %}
+{% block page_title %}Sales Counter & Billing{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="row">
+        <!-- Scanner & Product Section -->
+        <div class="col-lg-8">
+            <!-- Scanner Input -->
+            <div class="section-card mb-4 animate__animated animate__fadeInUp">
+                <div class="section-header">
+                    <h3><i class="fas fa-barcode"></i> Product Scanner</h3>
+                </div>
+                <div class="scanner-section">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Scan Barcode or Upload Image</label>
+                        <div class="input-group input-group-lg">
+                            <input type="text" class="form-control" id="barcodeInput" 
+                                   placeholder="Scan barcode here..." autofocus>
+                            <button class="btn btn-outline-primary" type="button" id="cameraBtn">
+                                <i class="fas fa-camera"></i> Upload Image
+                            </button>
+                        </div>
+                        <input type="file" id="imageUpload" class="d-none" accept="image/*">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Details Card -->
+            <div id="productSection" style="display: none;" class="animate__animated animate__fadeInUp">
+                <div class="section-card mb-4">
+                    <div class="section-header">
+                        <h3>Product Details</h3>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearProduct()">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="detail-box">
+                                <span class="detail-label">Product Name</span>
+                                <h4 id="productName">-</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detail-box">
+                                <span class="detail-label">Category</span>
+                                <h4 id="productCategory">-</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detail-box">
+                                <span class="detail-label">Price</span>
+                                <h4 id="productPrice">₹0.00</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detail-box">
+                                <span class="detail-label">Stock Available</span>
+                                <h4 id="productStock">0</h4>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="detail-box" id="expiryAlertBox" style="display: none; border-left-color: #dc3545;">
+                                <span class="detail-label" style="color: #dc3545;">
+                                    <i class="fas fa-exclamation-circle"></i> Expiry Alert
+                                </span>
+                                <h4 id="expiryInfo" style="color: #dc3545;">-</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sale Form -->
+            <div id="saleForm" style="display: none;" class="animate__animated animate__fadeInUp">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h3>Process Sale</h3>
+                    </div>
+                    <form id="saleFormElement">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Quantity *</label>
+                                <input type="number" class="form-control form-control-lg" id="quantity" 
+                                       min="1" value="1" required>
+                                <small class="text-muted" id="stockWarning"></small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Total Amount</label>
+                                <h3 id="totalAmount" class="text-success" style="margin: 0.5rem 0 0 0;">₹0.00</h3>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2 d-sm-flex mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check-circle"></i> Complete Sale
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-lg" onclick="clearProduct()">
+                                <i class="fas fa-times-circle"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Section -->
+        <div class="col-lg-4">
+            <!-- Today's Summary -->
+            <div class="section-card mb-4 animate__animated animate__fadeInUp">
+                <div class="section-header">
+                    <h3><i class="fas fa-chart-pie"></i> Today's Summary</h3>
+                </div>
+                <div class="summary-stat">
+                    <span class="stat-label">Total Sales</span>
+                    <h3 id="totalSales" class="stat-value">0</h3>
+                </div>
+                <div class="summary-stat">
+                    <span class="stat-label">Total Revenue</span>
+                    <h3 id="totalRevenue" class="stat-value">₹0.00</h3>
+                </div>
+                <div class="summary-stat">
+                    <span class="stat-label">Avg Sale Value</span>
+                    <h3 id="avgValue" class="stat-value">₹0.00</h3>
+                </div>
+            </div>
+
+            <!-- Recent Transactions -->
+            <div class="section-card animate__animated animate__fadeInUp">
+                <div class="section-header">
+                    <h3><i class="fas fa-receipt"></i> Recent Sales</h3>
+                    <button class="btn btn-sm btn-primary" onclick="downloadReport()" title="Download Report">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+                <div id="recentSales" class="recent-sales">
+                    <p class="text-muted text-center py-4">No sales yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .scanner-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #f0f2f5 100%);
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        border: 2px dashed #ddd;
+    }
+
+    .input-group-lg .form-control,
+    .input-group-lg .btn {
+        height: 3rem;
+        font-size: 1.1rem;
+    }
+
+    .detail-box {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid #667eea;
+        transition: all 0.3s ease;
+    }
+
+    .detail-box:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .detail-label {
+        display: block;
+        font-size: 0.85rem;
+        color: #999;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    .detail-box h4 {
+        margin: 0;
+        color: #333;
+        font-weight: 600;
+        font-size: 1.25rem;
+    }
+
+    .summary-stat {
+        padding: 1.25rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #667eea;
+        transition: all 0.3s ease;
+    }
+
+    .summary-stat:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .summary-stat:last-child {
+        margin-bottom: 0;
+    }
+
+    .stat-label {
+        display: block;
+        font-size: 0.85rem;
+        color: #999;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    .stat-value {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #333;
+    }
+
+    .recent-sales {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .recent-sale-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid #eee;
+        transition: all 0.2s;
+    }
+
+    .recent-sale-item:hover {
+        background: #f8f9fa;
+    }
+
+    .recent-sale-item:last-child {
+        border-bottom: none;
+    }
+
+    .sale-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex: 1;
+    }
+
+    .sale-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 50%;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .sale-product {
+        margin: 0;
+        font-weight: 500;
+        color: #333;
+        font-size: 0.95rem;
+    }
+
+    .sale-time {
+        margin: 0.25rem 0 0 0;
+        color: #999;
+        font-size: 0.85rem;
+    }
+
+    .sale-amount {
+        text-align: right;
+    }
+
+    .sale-qty {
+        margin: 0;
+        color: #666;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .sale-total {
+        margin: 0.25rem 0 0 0;
+        color: #28a745;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .sale-expiry-alert {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #dc3545;
+        font-size: 1.2rem;
+    }
+
+    #stockWarning {
+        display: none;
+        color: #dc3545;
+    }
+
+    .g-3 {
+        gap: 1.5rem !important;
+    }
+
+    @media (max-width: 768px) {
+        .input-group-lg .form-control,
+        .input-group-lg .btn {
+            height: 2.5rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentProduct = null;
+    let salesList = [];
+    let totalSalesAmount = 0;
+    let totalRevenue = 0;
+
+    const barcodeInput = document.getElementById('barcodeInput');
+    const quantityInput = document.getElementById('quantity');
+    const cameraBtn = document.getElementById('cameraBtn');
+    const imageUpload = document.getElementById('imageUpload');
+
+    // Camera button handler
+    cameraBtn.addEventListener('click', () => {
+        imageUpload.click();
+    });
+
+    // Image upload handler
+    imageUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            recognizeBarcodeFromImage(file);
+        }
+    });
+
+    // Barcode input handler
+    barcodeInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const barcode = barcodeInput.value.trim();
+            if (barcode) {
+                fetchProduct(barcode);
+            }
+        }
+    });
+
+    // Quantity change handler
+    quantityInput.addEventListener('change', updateTotal);
+    quantityInput.addEventListener('input', updateTotal);
+
+    function recognizeBarcodeFromImage(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            // In production, use a barcode recognition library like:
+            // - QuaggaJS
+            // - @zxing/library
+            // For now, we'll show a placeholder implementation
+            showToast('Processing', 'Scanning barcode from image...', 'info');
+            
+            // Simulated barcode extraction
+            setTimeout(() => {
+                // Extract from image (this would use a real barcode library)
+                // For demo: assume extracted barcode
+                const simulatedBarcode = '8901234567890'; // Example
+                fetchProduct(simulatedBarcode);
+                imageUpload.value = '';
+            }, 1500);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function fetchProduct(barcode) {
+        fetch(`/api/product/${barcode}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    currentProduct = data.product;
+                    displayProductDetails(data.product);
+                    barcodeInput.value = '';
+                    quantityInput.focus();
+                    showToast('Success', 'Product found', 'success');
+                } else {
+                    showToast('Error', 'Product not found', 'danger');
+                    barcodeInput.value = '';
+                    barcodeInput.focus();
+                }
+            })
+            .catch(err => {
+                showToast('Error', 'Failed to fetch product', 'danger');
+                console.error('Error:', err);
+            });
+    }
+
+    function displayProductDetails(product) {
+        document.getElementById('productName').textContent = product.name;
+        document.getElementById('productCategory').textContent = product.category || 'N/A';
+        document.getElementById('productPrice').textContent = '₹' + parseFloat(product.price).toFixed(2);
+        document.getElementById('productStock').textContent = product.stock_quantity || product.stock || 0;
+        
+        // Check expiry status
+        checkExpiryStatus(product);
+        
+        document.getElementById('productSection').style.display = 'block';
+        document.getElementById('saleForm').style.display = 'block';
+        
+        quantityInput.max = product.stock_quantity || product.stock || 0;
+        quantityInput.value = 1;
+        updateTotal();
+    }
+
+    function checkExpiryStatus(product) {
+        const expiryBox = document.getElementById('expiryAlertBox');
+        const expiryInfo = document.getElementById('expiryInfo');
+        
+        if (product.expiry_date) {
+            const expiryDate = new Date(product.expiry_date);
+            const today = new Date();
+            const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+            
+            if (daysLeft <= 30) {
+                expiryBox.style.display = 'block';
+                if (daysLeft <= 0) {
+                    expiryInfo.innerHTML = '<i class="fas fa-times-circle"></i> EXPIRED';
+                    document.getElementById('saleForm').style.display = 'none';
+                } else if (daysLeft <= 7) {
+                    expiryInfo.innerHTML = `<i class="fas fa-exclamation-circle"></i> Expires in ${daysLeft} days`;
+                } else {
+                    expiryInfo.innerHTML = `<i class="fas fa-clock"></i> Expires in ${daysLeft} days`;
+                }
+            } else {
+                expiryBox.style.display = 'none';
+            }
+        } else {
+            expiryBox.style.display = 'none';
+        }
+    }
+
+    function updateTotal() {
+        if (currentProduct) {
+            const qty = parseInt(quantityInput.value) || 1;
+            const maxQty = parseInt(quantityInput.max) || 0;
+            const total = parseFloat(currentProduct.price) * qty;
+            
+            document.getElementById('totalAmount').textContent = '₹' + total.toFixed(2);
+            
+            // Show warning if quantity exceeds stock
+            const warningEl = document.getElementById('stockWarning');
+            if (qty > maxQty) {
+                warningEl.style.display = 'block';
+                warningEl.textContent = `Only ${maxQty} units available`;
+            } else {
+                warningEl.style.display = 'none';
+            }
+        }
+    }
+
+    function clearProduct() {
+        currentProduct = null;
+        document.getElementById('productSection').style.display = 'none';
+        document.getElementById('saleForm').style.display = 'none';
+        document.getElementById('expiryAlertBox').style.display = 'none';
+        quantityInput.value = 1;
+        barcodeInput.value = '';
+        barcodeInput.focus();
+    }
+
+    // Form submission
+    document.getElementById('saleFormElement').addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        if (!currentProduct) {
+            showToast('Error', 'No product selected', 'danger');
+            return;
+        }
+
+        const quantity = parseInt(quantityInput.value);
+        const maxStock = parseInt(quantityInput.max) || 0;
+        
+        if (quantity > maxStock) {
+            showToast('Error', `Only ${maxStock} units available`, 'danger');
+            return;
+        }
+
+        const formData = {
+            product_id: currentProduct.id,
+            quantity: quantity
+        };
+
+        fetch('/api/record_sale', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const sale = {
+                    id: salesList.length + 1,
+                    name: currentProduct.name,
+                    quantity: quantity,
+                    price: parseFloat(currentProduct.price),
+                    total: data.total_price || (parseFloat(currentProduct.price) * quantity),
+                    time: new Date().toLocaleTimeString(),
+                    hasExpiry: currentProduct.expiry_date && isNearExpiry(currentProduct.expiry_date)
+                };
+                
+                salesList.unshift(sale);
+                totalSalesAmount += quantity;
+                totalRevenue += sale.total;
+                
+                updateSummary();
+                updateRecentSales();
+                
+                showToast('Success', `Sale recorded: ₹${sale.total.toFixed(2)}`, 'success');
+                clearProduct();
+            } else {
+                showToast('Error', data.message || 'Failed to record sale', 'danger');
+            }
+        })
+        .catch(err => {
+            showToast('Error', 'Error: ' + err.message, 'danger');
+            console.error('Error:', err);
+        });
+    });
+
+    function isNearExpiry(expiryDate) {
+        const expiry = new Date(expiryDate);
+        const today = new Date();
+        const daysLeft = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+        return daysLeft <= 30 && daysLeft > 0;
+    }
+
+    function updateSummary() {
+        document.getElementById('totalSales').textContent = totalSalesAmount;
+        document.getElementById('totalRevenue').textContent = '₹' + totalRevenue.toFixed(2);
+        
+        const avg = totalSalesAmount > 0 ? totalRevenue / totalSalesAmount : 0;
+        document.getElementById('avgValue').textContent = '₹' + avg.toFixed(2);
+    }
+
+    function updateRecentSales() {
+        const container = document.getElementById('recentSales');
+        
+        if (salesList.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center py-4">No sales yet</p>';
+            return;
+        }
+
+        container.innerHTML = salesList.slice(0, 10).map((sale) => `
+            <div class="recent-sale-item" style="position: relative;">
+                <div class="sale-info">
+                    <span class="sale-number">#${sale.id}</span>
+                    <div>
+                        <p class="sale-product">${sale.name}</p>
+                        <p class="sale-time">${sale.time}</p>
+                    </div>
+                </div>
+                <div class="sale-amount">
+                    <p class="sale-qty">${sale.quantity}x</p>
+                    <p class="sale-total">₹${sale.total.toFixed(2)}</p>
+                </div>
+                ${sale.hasExpiry ? '<div class="sale-expiry-alert" title="Near expiry"><i class="fas fa-exclamation-circle"></i></div>' : ''}
+            </div>
+        `).join('');
+    }
+
+    function downloadReport() {
+        if (salesList.length === 0) {
+            showToast('Warning', 'No sales to download', 'warning');
+            return;
+        }
+        
+        // Generate CSV
+        const headers = ['#', 'Product', 'Quantity', 'Price', 'Total', 'Time'];
+        const rows = salesList.map((sale, i) => [
+            i + 1,
+            sale.name,
+            sale.quantity,
+            '₹' + sale.price.toFixed(2),
+            '₹' + sale.total.toFixed(2),
+            sale.time
+        ]);
+        
+        const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sales-report-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+    }
+
+    // Initialize
+    updateSummary();
+</script>
+{% endblock %}

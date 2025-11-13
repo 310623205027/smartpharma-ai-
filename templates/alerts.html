@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+
+{% block title %}Alerts - SmartPharma{% endblock %}
+{% block page_title %}Alerts & Notifications{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Alert Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-icon alert-danger"><i class="fas fa-exclamation-circle"></i></div>
+                <div class="stat-content">
+                    <h3 id="critical-count">0</h3>
+                    <p>Critical Alerts</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-icon alert-warning"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="stat-content">
+                    <h3 id="warning-count">0</h3>
+                    <p>Warning Alerts</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-icon alert-info"><i class="fas fa-bell"></i></div>
+                <div class="stat-content">
+                    <h3 id="total-count">0</h3>
+                    <p>Total Alerts</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="mb-4">
+        <button class="btn btn-outline-primary active" onclick="filterAlerts('all')">All</button>
+        <button class="btn btn-outline-danger" onclick="filterAlerts('critical')">Critical</button>
+        <button class="btn btn-outline-warning" onclick="filterAlerts('warning')">Warning</button>
+        <button class="btn btn-outline-info" onclick="filterAlerts('expiry')">Expiry</button>
+        <button class="btn btn-outline-success" onclick="filterAlerts('stock')">Stock</button>
+    </div>
+
+    <!-- Alerts List -->
+    <div class="section-card">
+        <div class="section-header">
+            <h2>Active Alerts</h2>
+            <button class="btn btn-sm btn-outline-secondary" onclick="refreshAlerts()">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+        </div>
+        
+        <div id="alertsContainer">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading alerts...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allAlerts = [];
+    let currentFilter = 'all';
+
+    function loadAlerts() {
+        fetch('/api/alerts')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    allAlerts = data.alerts;
+                    document.getElementById('critical-count').textContent = data.critical;
+                    document.getElementById('warning-count').textContent = data.warning;
+                    document.getElementById('total-count').textContent = data.count;
+                    displayAlerts();
+                }
+            })
+            .catch(err => console.error('Error:', err));
+    }
+
+    function filterAlerts(type) {
+        currentFilter = type;
+        document.querySelectorAll('.btn-outline-primary, .btn-outline-danger, .btn-outline-warning, .btn-outline-info, .btn-outline-success')
+            .forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        displayAlerts();
+    }
+
+    function displayAlerts() {
+        let filtered = allAlerts;
+
+        if (currentFilter === 'critical') {
+            filtered = allAlerts.filter(a => a.severity === 'critical');
+        } else if (currentFilter === 'warning') {
+            filtered = allAlerts.filter(a => a.severity === 'warning');
+        } else if (currentFilter === 'expiry') {
+            filtered = allAlerts.filter(a => a.type === 'expiry');
+        } else if (currentFilter === 'stock') {
+            filtered = allAlerts.filter(a => a.type === 'stock');
+        }
+
+        const container = document.getElementById('alertsContainer');
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-check-circle" style="font-size: 3rem; color: #28a745;"></i>
+                    <p class="mt-3">No alerts matching this filter</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = filtered.map(alert => `
+            <div class="alert-item alert-${alert.severity === 'critical' ? 'danger' : 'warning'} mb-3">
+                <div class="alert-header">
+                    <div class="alert-title">
+                        <i class="fas fa-${alert.type === 'expiry' ? 'clock' : 'boxes'}"></i>
+                        <strong>${alert.product}</strong>
+                        <span class="badge bg-${alert.severity === 'critical' ? 'danger' : 'warning'} ms-2">
+                            ${alert.severity.toUpperCase()}
+                        </span>
+                        <span class="badge bg-info ms-1">${alert.type.toUpperCase()}</span>
+                    </div>
+                </div>
+                <div class="alert-body">
+                    <p class="mb-2"><strong>${alert.message}</strong></p>
+                    <div class="alert-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Barcode:</span>
+                            <code>${alert.details.barcode}</code>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Category:</span>
+                            <span>${alert.details.category}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Stock:</span>
+                            <span>${alert.details.stock} units</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Price:</span>
+                            <span>₹${parseFloat(alert.details.price).toFixed(2)}</span>
+                        </div>
+                        ${alert.type === 'expiry' ? `
+                            <div class="detail-row">
+                                <span class="detail-label">Expiry Date:</span>
+                                <span>${alert.details.expiry_date}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="alert-actions">
+                    <button class="btn btn-sm btn-primary" onclick="viewDetails(${alert.product_id})">
+                        <i class="fas fa-eye"></i> View Details
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="dismissAlert(${alert.alert_id})">
+                        <i class="fas fa-times"></i> Dismiss
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function refreshAlerts() {
+        loadAlerts();
+    }
+
+    function dismissAlert(alertId) {
+        allAlerts = allAlerts.filter(a => a.alert_id !== alertId);
+        displayAlerts();
+    }
+
+    function viewDetails(productId) {
+        alert('Product ID: ' + productId + '\nFull details implementation can be added here.');
+    }
+
+    loadAlerts();
+    setInterval(loadAlerts, 10000);
+</script>
+
+<style>
+    .alert-item {
+        border-left: 5px solid;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        background-color: #f8f9fa;
+    }
+
+    .alert-danger {
+        border-left-color: #dc3545;
+        background-color: #fff5f5;
+    }
+
+    .alert-warning {
+        border-left-color: #ffc107;
+        background-color: #fffbf0;
+    }
+
+    .alert-header {
+        margin-bottom: 0.75rem;
+    }
+
+    .alert-title {
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .alert-body {
+        margin-bottom: 1rem;
+    }
+
+    .alert-details {
+        background: white;
+        padding: 0.75rem;
+        border-radius: 0.375rem;
+        font-size: 0.9rem;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.35rem 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        font-weight: 500;
+        color: #666;
+    }
+
+    .alert-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .stat-card {
+        display: flex;
+        align-items: center;
+        padding: 1.5rem;
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.5rem;
+        color: white;
+        margin-right: 1rem;
+    }
+
+    .stat-icon.alert-danger {
+        background-color: #dc3545;
+    }
+
+    .stat-icon.alert-warning {
+        background-color: #ffc107;
+        color: #333;
+    }
+
+    .stat-icon.alert-info {
+        background-color: #17a2b8;
+    }
+
+    .stat-content h3 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: bold;
+    }
+
+    .stat-content p {
+        margin: 0.25rem 0 0 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+</style>
+
+{% endblock %}

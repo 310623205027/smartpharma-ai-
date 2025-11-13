@@ -1,0 +1,1025 @@
+{% extends 'base.html' %}
+
+{% block title %}Scan & Upload - SmartPharma{% endblock %}
+{% block page_title %}Scan & Upload Products{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="row">
+        <!-- Scan Methods -->
+        <div class="col-lg-6 mb-4">
+            <div class="section-card modern-card animate__animated animate__fadeInUp">
+                <div class="section-header">
+                    <div>
+                        <h3><i class="fas fa-barcode"></i> Scan Barcode</h3>
+                        <p class="section-subtitle">Upload image or connect via DroidCam</p>
+                    </div>
+                </div>
+
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs modern-tabs mb-3" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-scan" type="button">
+                            <i class="fas fa-image"></i> Upload Image
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="droidcam-tab" data-bs-toggle="tab" data-bs-target="#droidcam-scan" type="button">
+                            <i class="fas fa-mobile-alt"></i> DroidCam
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- File Upload Tab -->
+                    <div class="tab-pane fade show active" id="file-scan">
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-icon-wrapper">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                            </div>
+                            <h4 class="upload-title">Drop your image here</h4>
+                            <p class="upload-text">or click to browse</p>
+                            <div class="upload-formats">
+                                <span class="format-badge">JPG</span>
+                                <span class="format-badge">PNG</span>
+                                <span class="format-badge">JPEG</span>
+                            </div>
+                            <input type="file" id="fileInput" accept="image/*" hidden>
+                        </div>
+                    </div>
+
+                    <!-- DroidCam Tab -->
+                    <div class="tab-pane fade" id="droidcam-scan">
+                        <div class="droidcam-container">
+                            <!-- Simplified URL Configuration -->
+                            <div class="form-group mb-3">
+                                <label class="form-label"><i class="fas fa-cog"></i> Connection Settings</label>
+                                <div class="row g-2">
+                                    <div class="col-8">
+                                        <input type="text" class="form-control droidcam-input" id="droidcamIP" 
+                                               placeholder="192.168.1.101" value="192.168.1.101">
+                                    </div>
+                                    <div class="col-4">
+                                        <input type="number" class="form-control droidcam-input" id="droidcamPort" 
+                                               placeholder="4747" value="4747" min="1" max="65535">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Live Stream Display -->
+                            <div class="droidcam-stream-container">
+                                <video id="droidcam-video" class="droidcam-video" autoplay playsinline muted></video>
+                                <img id="droidcam-img" class="droidcam-img" alt="DroidCam Stream">
+                                <div id="droidcam-placeholder" class="droidcam-placeholder">
+                                    <div class="camera-icon-wrapper">
+                                        <i class="fas fa-mobile-alt camera-icon"></i>
+                                    </div>
+                                    <p class="camera-text">Camera stream will appear here</p>
+                                </div>
+                                <div id="fps-counter" class="fps-counter">FPS: 0</div>
+                            </div>
+
+                            <canvas id="droidcam-canvas" style="display: none;"></canvas>
+
+                            <!-- Control Buttons -->
+                            <div class="mt-3 d-flex gap-2 justify-content-center flex-wrap">
+                                <button type="button" class="btn btn-primary" id="connectDroidcam">
+                                    <i class="fas fa-link"></i> Connect
+                                </button>
+                                <button type="button" class="btn btn-danger d-none" id="disconnectDroidcam">
+                                    <i class="fas fa-unlink"></i> Disconnect
+                                </button>
+                                <button type="button" class="btn btn-success d-none" id="captureDroidcam">
+                                    <i class="fas fa-camera"></i> Capture & Scan
+                                </button>
+                            </div>
+
+                            <!-- Compact Status -->
+                            <div id="droidcam-status" class="status-indicator mt-3" style="display: none;">
+                                <i class="fas fa-circle-notch fa-spin"></i> <span id="statusText">Connecting...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scan Result -->
+                <div id="scanResult" class="alert alert-success modern-alert" style="display:none;">
+                    <div class="alert-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="alert-content">
+                        <strong>Barcode Found!</strong>
+                        <div class="mt-2">
+                            <p><strong>Barcode:</strong> <code class="barcode-result" id="barcodeValue"></code></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="scanError" class="alert alert-danger modern-alert" style="display:none;">
+                    <div class="alert-icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="alert-content">
+                        <strong>Error!</strong>
+                        <p id="errorMessage"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Form -->
+        <div class="col-lg-6 mb-4">
+            <div class="section-card modern-card animate__animated animate__fadeInUp">
+                <div class="section-header">
+                    <div>
+                        <h3><i class="fas fa-plus-circle"></i> Product Details</h3>
+                        <p class="section-subtitle">Fill in the product information</p>
+                    </div>
+                </div>
+                <form id="productForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label modern-label">
+                                <i class="fas fa-pills"></i> Product Name *
+                            </label>
+                            <input type="text" class="form-control modern-input" id="productName" required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label modern-label">
+                                <i class="fas fa-tags"></i> Category *
+                            </label>
+                            <select class="form-select modern-input" id="category" required>
+                                <option value="">Select Category</option>
+                                <option value="Pain Relief">Pain Relief</option>
+                                <option value="Antibiotic">Antibiotic</option>
+                                <option value="Supplement">Supplement</option>
+                                <option value="Anti-inflammatory">Anti-inflammatory</option>
+                                <option value="Cough Relief">Cough Relief</option>
+                                <option value="Allergy Relief">Allergy Relief</option>
+                                <option value="Gastric">Gastric</option>
+                                <option value="Diabetes">Diabetes</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label modern-label">
+                                <i class="fas fa-barcode"></i> Barcode *
+                            </label>
+                            <input type="text" class="form-control modern-input barcode-input" id="barcode" required readonly>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label modern-label">
+                                <i class="fas fa-rupee-sign"></i> Price (₹) *
+                            </label>
+                            <input type="number" class="form-control modern-input" id="price" step="0.01" required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label modern-label">
+                                <i class="fas fa-boxes"></i> Stock Quantity *
+                            </label>
+                            <input type="number" class="form-control modern-input" id="stockQuantity" required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label modern-label">
+                                <i class="fas fa-box"></i> Packaging Type *
+                            </label>
+                            <select class="form-select modern-input" id="packagingType" required onchange="updateEcoScore()">
+                                <option value="">Select Packaging</option>
+                                <option value="Plastic">Plastic (Eco: 3.5/10)</option>
+                                <option value="Paper">Paper (Eco: 8.0/10)</option>
+                                <option value="Glass">Glass (Eco: 7.5/10)</option>
+                                <option value="Cardboard">Cardboard (Eco: 8.5/10)</option>
+                                <option value="Metal">Metal (Eco: 7.0/10)</option>
+                                <option value="Biodegradable">Biodegradable (Eco: 9.5/10)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label modern-label">
+                                <i class="fas fa-calendar-alt"></i> Expiry Date *
+                            </label>
+                            <input type="date" class="form-control modern-input" id="expiryDate" required>
+                        </div>
+
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label modern-label">
+                                <i class="fas fa-leaf"></i> Eco Score
+                            </label>
+                            <div class="eco-score-display">
+                                <div class="eco-score-bar">
+                                    <div class="eco-score-fill" id="ecoScoreFill" style="width: 50%;"></div>
+                                </div>
+                                <div class="eco-score-value">
+                                    <span id="ecoScoreDisplay">5.0</span>/10
+                                </div>
+                            </div>
+                            <input type="hidden" id="ecoScore" value="5.0">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 modern-submit-btn">
+                        <i class="fas fa-save"></i> Add Product to Inventory
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .modern-card {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+    }
+
+    .modern-card:hover {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .section-subtitle {
+        color: #6c757d;
+        font-size: 14px;
+        margin: 5px 0 0 0;
+    }
+
+    .modern-tabs {
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .modern-tabs .nav-link {
+        color: #666;
+        border: none;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+        padding: 12px 24px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .modern-tabs .nav-link:hover {
+        color: #667eea;
+        background: rgba(102, 126, 234, 0.05);
+    }
+
+    .modern-tabs .nav-link.active {
+        color: #667eea;
+        border-color: #667eea;
+    }
+
+    .upload-area {
+        border: 3px dashed #e0e0e0;
+        padding: 60px 40px;
+        text-align: center;
+        border-radius: 16px;
+        cursor: pointer;
+        transition: all 0.4s ease;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    }
+
+    .upload-area:hover {
+        border-color: #667eea;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        transform: translateY(-2px);
+    }
+
+    .upload-area.drag-over {
+        border-color: #667eea;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        transform: scale(1.02);
+    }
+
+    .upload-icon-wrapper {
+        margin-bottom: 20px;
+    }
+
+    .upload-icon {
+        font-size: 64px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .upload-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #333;
+        margin: 15px 0 10px 0;
+    }
+
+    .upload-text {
+        color: #666;
+        font-size: 14px;
+        margin: 0 0 20px 0;
+    }
+
+    .upload-formats {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin-top: 15px;
+    }
+
+    .format-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .droidcam-input {
+        border: 2px solid #e9ecef !important;
+        border-radius: 10px;
+        padding: 12px 16px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.95rem;
+    }
+
+    .droidcam-input:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    .droidcam-stream-container {
+        position: relative;
+        width: 100%;
+        height: 400px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #000;
+        margin-bottom: 15px;
+    }
+
+    .droidcam-video,
+    .droidcam-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: none;
+    }
+
+    .droidcam-video.active,
+    .droidcam-img.active {
+        display: block;
+    }
+
+    .droidcam-placeholder {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .droidcam-placeholder.hidden {
+        display: none;
+    }
+
+    .camera-icon-wrapper {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .camera-icon {
+        font-size: 36px;
+        color: #667eea;
+    }
+
+    .camera-text {
+        color: #666;
+        font-size: 16px;
+        margin: 0;
+    }
+
+    .fps-counter {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #0f0;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-family: monospace;
+        font-size: 12px;
+        display: none;
+    }
+
+    .fps-counter.active {
+        display: block;
+    }
+
+    .status-indicator {
+        text-align: center;
+        padding: 10px;
+        border-radius: 8px;
+        background: #e3f2fd;
+        color: #1976d2;
+        font-size: 14px;
+    }
+
+    .status-indicator.success {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .status-indicator.error {
+        background: #ffebee;
+        color: #c62828;
+    }
+
+    .modern-alert {
+        border: none;
+        border-radius: 12px;
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-top: 1rem;
+    }
+
+    .alert-icon {
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    .barcode-result {
+        background: rgba(0, 0, 0, 0.05);
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+    }
+
+    .modern-label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .modern-label i {
+        color: #667eea;
+        margin-right: 6px;
+    }
+
+    .modern-input {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 12px 16px;
+        transition: all 0.3s ease;
+    }
+
+    .modern-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    .barcode-input {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        letter-spacing: 1px;
+    }
+
+    .eco-score-display {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+
+    .eco-score-bar {
+        flex: 1;
+        height: 12px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .eco-score-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #34d399);
+        transition: all 0.5s ease;
+    }
+
+    .eco-score-value {
+        font-weight: 700;
+        font-size: 18px;
+        color: #333;
+        min-width: 60px;
+        text-align: center;
+    }
+
+    .modern-submit-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 14px 32px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .modern-submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    }
+
+    .animate__animated {
+        animation-duration: 0.6s;
+    }
+
+    @media (max-width: 768px) {
+        .upload-area {
+            padding: 40px 20px;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+        }
+
+        .modern-tabs .nav-link {
+            padding: 10px 12px;
+            font-size: 0.85rem;
+        }
+
+        .droidcam-stream-container {
+            height: 300px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const scanResult = document.getElementById('scanResult');
+    const scanError = document.getElementById('scanError');
+    const barcodeValue = document.getElementById('barcodeValue');
+    const productForm = document.getElementById('productForm');
+
+    // File Upload
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+    });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) {
+            handleScan(e.dataTransfer.files[0]);
+        }
+    });
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) handleScan(fileInput.files[0]);
+    });
+
+    // DroidCam Enhanced Connection
+    const droidcamVideo = document.getElementById('droidcam-video');
+    const droidcamImg = document.getElementById('droidcam-img');
+    const droidcamPlaceholder = document.getElementById('droidcam-placeholder');
+    const droidcamCanvas = document.getElementById('droidcam-canvas');
+    const droidcamStatus = document.getElementById('droidcam-status');
+    const fpsCounter = document.getElementById('fps-counter');
+    const droidcamIP = document.getElementById('droidcamIP');
+    const droidcamPort = document.getElementById('droidcamPort');
+    
+    let droidcamConnected = false;
+    let streamInterval = null;
+    let frameCount = 0;
+    let lastFpsTime = Date.now();
+    let streamUrl = '';
+
+    // Update FPS counter
+    function updateFPS() {
+        frameCount++;
+        const now = Date.now();
+        if (now - lastFpsTime >= 1000) {
+            fpsCounter.textContent = `FPS: ${frameCount}`;
+            frameCount = 0;
+            lastFpsTime = now;
+        }
+    }
+
+    // Method 1: Try using img tag with MJPEG stream (Best for IP Webcam/DroidCam)
+    function connectViaImageStream() {
+        const ip = droidcamIP.value.trim();
+        const port = droidcamPort.value.trim();
+        streamUrl = `http://${ip}:${port}/video`;
+        
+        console.log('Attempting image stream connection:', streamUrl);
+        
+        return new Promise((resolve, reject) => {
+            // Set the image source directly without crossOrigin to avoid CORS
+            droidcamImg.onload = () => {
+                console.log('Image stream connected successfully');
+                droidcamImg.classList.add('active');
+                droidcamPlaceholder.classList.add('hidden');
+                fpsCounter.classList.add('active');
+                
+                // Refresh stream periodically
+                streamInterval = setInterval(() => {
+                    if (droidcamConnected) {
+                        droidcamImg.src = streamUrl + '?t=' + Date.now();
+                        updateFPS();
+                    }
+                }, 100); // 10 FPS
+                
+                resolve(true);
+            };
+            
+            droidcamImg.onerror = () => {
+                console.log('Image stream failed, trying alternative methods...');
+                droidcamImg.classList.remove('active');
+                reject(new Error('Image stream connection failed'));
+            };
+            
+            // Start loading the stream
+            droidcamImg.src = streamUrl + '?t=' + Date.now();
+            
+            // Timeout after 5 seconds
+            setTimeout(() => {
+                if (!droidcamImg.classList.contains('active')) {
+                    reject(new Error('Connection timeout'));
+                }
+            }, 5000);
+        });
+    }
+
+    // Method 2: Try fetching frames manually
+    function connectViaFrameFetch() {
+        const ip = droidcamIP.value.trim();
+        const port = droidcamPort.value.trim();
+        streamUrl = `http://${ip}:${port}/video`;
+        
+        console.log('Attempting frame fetch connection:', streamUrl);
+        
+        return fetch(streamUrl, { 
+            method: 'GET',
+            mode: 'no-cors',
+            cache: 'no-cache'
+        })
+        .then(() => {
+            console.log('Frame fetch connected');
+            droidcamImg.src = streamUrl;
+            droidcamImg.classList.add('active');
+            droidcamPlaceholder.classList.add('hidden');
+            fpsCounter.classList.add('active');
+            
+            streamInterval = setInterval(() => {
+                if (droidcamConnected) {
+                    droidcamImg.src = streamUrl + '?t=' + Date.now();
+                    updateFPS();
+                }
+            }, 100);
+            
+            return true;
+        });
+    }
+
+    // Method 3: Try video element (for some cameras)
+    function connectViaVideoElement() {
+        const ip = droidcamIP.value.trim();
+        const port = droidcamPort.value.trim();
+        streamUrl = `http://${ip}:${port}/video`;
+        
+        console.log('Attempting video element connection:', streamUrl);
+        
+        return new Promise((resolve, reject) => {
+            droidcamVideo.src = streamUrl;
+            
+            droidcamVideo.onloadeddata = () => {
+                console.log('Video stream connected');
+                droidcamVideo.play().then(() => {
+                    droidcamVideo.classList.add('active');
+                    droidcamPlaceholder.classList.add('hidden');
+                    fpsCounter.classList.add('active');
+                    
+                    streamInterval = setInterval(() => {
+                        if (droidcamConnected) updateFPS();
+                    }, 100);
+                    
+                    resolve(true);
+                }).catch(reject);
+            };
+            
+            droidcamVideo.onerror = () => {
+                reject(new Error('Video stream failed'));
+            };
+            
+            setTimeout(() => reject(new Error('Video timeout')), 5000);
+        });
+    }
+
+    // Connect button handler
+    document.getElementById('connectDroidcam').addEventListener('click', async () => {
+        const ip = droidcamIP.value.trim();
+        const port = droidcamPort.value.trim();
+        
+        if (!ip) {
+            showToast('Error', 'Please enter IP address', 'danger');
+            return;
+        }
+
+        droidcamStatus.style.display = 'block';
+        droidcamStatus.className = 'status-indicator mt-3';
+        document.getElementById('statusText').textContent = 'Connecting...';
+
+        try {
+            // Try methods in order
+            let connected = false;
+            
+            try {
+                await connectViaImageStream();
+                connected = true;
+                console.log('Connected via image stream');
+            } catch (e) {
+                console.log('Image stream failed:', e.message);
+            }
+            
+            if (!connected) {
+                try {
+                    await connectViaFrameFetch();
+                    connected = true;
+                    console.log('Connected via frame fetch');
+                } catch (e) {
+                    console.log('Frame fetch failed:', e.message);
+                }
+            }
+            
+            if (!connected) {
+                try {
+                    await connectViaVideoElement();
+                    connected = true;
+                    console.log('Connected via video element');
+                } catch (e) {
+                    console.log('Video element failed:', e.message);
+                }
+            }
+            
+            if (connected) {
+                droidcamConnected = true;
+                droidcamStatus.className = 'status-indicator success mt-3';
+                document.getElementById('statusText').textContent = 'Connected ✓';
+                document.getElementById('connectDroidcam').classList.add('d-none');
+                document.getElementById('disconnectDroidcam').classList.remove('d-none');
+                document.getElementById('captureDroidcam').classList.remove('d-none');
+                showToast('Success', 'DroidCam connected successfully!', 'success');
+            } else {
+                throw new Error('All connection methods failed. Please check:\n• DroidCam app is running\n• IP address is correct: ' + ip + '\n• Port is correct: ' + port + '\n• Both devices are on same WiFi\n• Try opening http://' + ip + ':' + port + '/video in browser');
+            }
+            
+        } catch (error) {
+            console.error('Connection error:', error);
+            droidcamConnected = false;
+            droidcamStatus.className = 'status-indicator error mt-3';
+            document.getElementById('statusText').textContent = error.message;
+            showToast('Error', 'Connection failed', 'danger');
+        }
+    });
+
+    // Disconnect button handler
+    document.getElementById('disconnectDroidcam').addEventListener('click', () => {
+        droidcamConnected = false;
+        
+        if (streamInterval) {
+            clearInterval(streamInterval);
+            streamInterval = null;
+        }
+        
+        droidcamVideo.pause();
+        droidcamVideo.src = '';
+        droidcamVideo.classList.remove('active');
+        
+        droidcamImg.src = '';
+        droidcamImg.classList.remove('active');
+        
+        droidcamPlaceholder.classList.remove('hidden');
+        fpsCounter.classList.remove('active');
+        
+        document.getElementById('connectDroidcam').classList.remove('d-none');
+        document.getElementById('disconnectDroidcam').classList.add('d-none');
+        document.getElementById('captureDroidcam').classList.add('d-none');
+        droidcamStatus.style.display = 'none';
+        
+        frameCount = 0;
+        showToast('Info', 'Disconnected from DroidCam', 'info');
+    });
+
+    // Capture button handler
+    document.getElementById('captureDroidcam').addEventListener('click', async () => {
+        if (!droidcamConnected) {
+            showToast('Error', 'Not connected to DroidCam', 'danger');
+            return;
+        }
+        
+        const btn = document.getElementById('captureDroidcam');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Capturing...';
+        
+        try {
+            const canvas = droidcamCanvas;
+            const ctx = canvas.getContext('2d');
+            
+            // Determine source (video or img)
+            const source = droidcamVideo.classList.contains('active') ? droidcamVideo : droidcamImg;
+            
+            // Wait for valid dimensions
+            let attempts = 0;
+            while ((source.videoWidth === 0 && source.naturalWidth === 0) && attempts < 10) {
+                await new Promise(resolve => setTimeout(resolve, 200));
+                attempts++;
+            }
+            
+            const width = source.videoWidth || source.naturalWidth || 640;
+            const height = source.videoHeight || source.naturalHeight || 480;
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Draw frame
+            ctx.drawImage(source, 0, 0, width, height);
+            
+            // Convert to blob
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+            
+            if (blob && blob.size > 0) {
+                console.log('Captured frame:', blob.size, 'bytes');
+                await handleScan(blob);
+            } else {
+                throw new Error('Failed to capture valid frame');
+            }
+            
+        } catch (error) {
+            console.error('Capture error:', error);
+            showToast('Error', 'Failed to capture frame: ' + error.message, 'danger');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-camera"></i> Capture & Scan';
+        }
+    });
+
+    // Barcode Scanning
+    async function handleScan(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        uploadArea.classList.add('scanning');
+        uploadArea.innerHTML = '<div class="spinner-border text-primary"><span class="visually-hidden">Scanning...</span></div><p class="mt-3">Scanning barcode...</p>';
+
+        try {
+            const response = await fetch('/api/upload', { method: 'POST', body: formData });
+            const data = await response.json();
+            
+            resetUploadArea();
+            
+            if (data.status === 'success') {
+                document.getElementById('barcode').value = data.barcode;
+                barcodeValue.textContent = data.barcode;
+                scanError.style.display = 'none';
+                scanResult.style.display = 'flex';
+                showToast('Success', 'Barcode scanned successfully!', 'success');
+            } else {
+                throw new Error(data.message || 'Barcode scan failed');
+            }
+        } catch (error) {
+            resetUploadArea();
+            document.getElementById('errorMessage').textContent = error.message;
+            scanError.style.display = 'flex';
+            scanResult.style.display = 'none';
+            showToast('Error', error.message, 'danger');
+        }
+    }
+
+    function resetUploadArea() {
+        uploadArea.classList.remove('scanning');
+        uploadArea.innerHTML = '<div class="upload-icon-wrapper"><i class="fas fa-cloud-upload-alt upload-icon"></i></div><h4 class="upload-title">Drop your image here</h4><p class="upload-text">or click to browse</p><div class="upload-formats"><span class="format-badge">JPG</span><span class="format-badge">PNG</span><span class="format-badge">JPEG</span></div>';
+    }
+
+    // Eco Score
+    function updateEcoScore() {
+        const scores = { Plastic: 3.5, Paper: 8, Glass: 7.5, Cardboard: 8.5, Metal: 7, Biodegradable: 9.5 };
+        const score = scores[document.getElementById('packagingType').value] || 5;
+        document.getElementById('ecoScore').value = score;
+        document.getElementById('ecoScoreDisplay').textContent = score.toFixed(1);
+        const fill = document.getElementById('ecoScoreFill');
+        fill.style.width = (score * 10) + '%';
+        fill.style.background = score >= 7 ? 'linear-gradient(90deg, #10b981, #34d399)' : score >= 5 ? 'linear-gradient(90deg, #f59e0b, #fbbf24)' : 'linear-gradient(90deg, #ef4444, #f87171)';
+    }
+
+    // Form Submit
+    productForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = productForm.querySelector('button[type="submit"]');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/api/add-product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: document.getElementById('productName').value,
+                    category: document.getElementById('category').value,
+                    barcode: document.getElementById('barcode').value,
+                    price: document.getElementById('price').value,
+                    stock_quantity: document.getElementById('stockQuantity').value,
+                    packaging_type: document.getElementById('packagingType').value,
+                    expiry_date: document.getElementById('expiryDate').value,
+                    eco_score: document.getElementById('ecoScore').value
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                showToast('Success', 'Product added successfully!', 'success');
+                productForm.reset();
+                scanResult.style.display = 'none';
+                updateEcoScore();
+                setTimeout(() => window.location.href = '/', 2000);
+            } else {
+                throw new Error(data.message || 'Failed to add product');
+            }
+        } catch (error) {
+            showToast('Error', error.message, 'danger');
+        } finally {
+            btn.innerHTML = '<i class="fas fa-save"></i> Add Product to Inventory';
+            btn.disabled = false;
+        }
+    });
+
+    // Initialize
+    updateEcoScore();
+    
+    // Toast notification function (make sure this exists in your base template)
+    function showToast(title, message, type) {
+        // If you have a toast system in base.html, use it
+        // Otherwise, use a simple alert
+        console.log(`${type.toUpperCase()}: ${title} - ${message}`);
+        
+        // Example Bootstrap toast implementation
+        if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+            const toastHTML = `
+                <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'danger' ? 'danger' : 'info'} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <strong>${title}</strong><br>${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            let toastContainer = document.querySelector('.toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                document.body.appendChild(toastContainer);
+            }
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+            const toastElement = toastContainer.lastElementChild;
+            const toast = new bootstrap.Toast(toastElement);
+            toast.show();
+            
+            toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
+        } else {
+            alert(`${title}: ${message}`);
+        }
+    }
+</script>
+{% endblock %}
