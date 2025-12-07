@@ -432,6 +432,273 @@ if (document.getElementById('quantityInput')) {
     document.getElementById('quantityInput').addEventListener('change', updatePriceCalculation);
     document.getElementById('quantityInput').addEventListener('input', updatePriceCalculation);
 }
+// ==================== SIDEBAR TOGGLE ====================
+const sidebar = document.getElementById('sidebar');
+const sidebarToggleMobile = document.getElementById('sidebarToggleMobile');
+const sidebarToggle = document.getElementById('sidebarToggle');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+const menuLinks = document.querySelectorAll('.menu-link');
+
+// Toggle sidebar on mobile
+function toggleSidebar() {
+    sidebar.classList.toggle('active');
+    sidebarOverlay.classList.toggle('active');
+}
+
+sidebarToggleMobile.addEventListener('click', toggleSidebar);
+sidebarToggle.addEventListener('click', toggleSidebar);
+sidebarOverlay.addEventListener('click', toggleSidebar);
+
+// Close sidebar when overlay clicked
+document.addEventListener('click', (e) => {
+    if (!sidebar.contains(e.target) && 
+        !sidebarToggleMobile.contains(e.target) && 
+        window.innerWidth <= 768) {
+        sidebar.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+    }
+});
+
+// ==================== ACTIVE MENU LINK ====================
+function setActiveMenuLink() {
+    const currentPath = window.location.pathname;
+    
+    menuLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        
+        if ((currentPath === '/' && href === '/') ||
+            (currentPath.includes('sales_counter') && href === '/sales_counter')) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+}
+
+setActiveMenuLink();
+
+// ==================== TOAST NOTIFICATION ====================
+const toastElement = document.getElementById('liveToast');
+const toastTitle = document.getElementById('toastTitle');
+const toastMessage = document.getElementById('toastMessage');
+let toastInstance = null;
+
+function showToast(message, type = 'info', duration = 3000) {
+    // Clear previous animations
+    toastElement.classList.remove('animate__fadeIn', 'animate__fadeOut');
+    
+    // Set toast styling based on type
+    const bgMap = {
+        'success': '#d4edda',
+        'danger': '#f8d7da',
+        'warning': '#fff3cd',
+        'info': '#d1ecf1'
+    };
+    
+    const textColorMap = {
+        'success': '#155724',
+        'danger': '#721c24',
+        'warning': '#856404',
+        'info': '#0c5460'
+    };
+    
+    toastElement.style.background = bgMap[type] || bgMap['info'];
+    toastElement.style.color = textColorMap[type] || textColorMap['info'];
+    toastTitle.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+    toastMessage.textContent = message;
+    
+    // Show toast
+    toastElement.classList.add('animate__fadeIn');
+    toastElement.style.display = 'block';
+    
+    // Auto hide after duration
+    if (toastInstance) clearTimeout(toastInstance);
+    toastInstance = setTimeout(() => {
+        toastElement.classList.remove('animate__fadeIn');
+        toastElement.classList.add('animate__fadeOut');
+        setTimeout(() => {
+            toastElement.style.display = 'none';
+        }, 500);
+    }, duration);
+}
+
+// ==================== DASHBOARD STATS ====================
+function initDashboardStats() {
+    const statCards = document.querySelectorAll('.stat-card');
+    
+    if (statCards.length > 0) {
+        statCards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+            card.classList.add('animate__animated', 'animate__fadeInUp');
+        });
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    initDashboardStats();
+    
+    // Smooth scroll behavior
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    });
+});
+
+// ==================== RESPONSIVE SIDEBAR ====================
+let lastWidth = window.innerWidth;
+
+window.addEventListener('resize', () => {
+    const currentWidth = window.innerWidth;
+    
+    // Close sidebar when resizing from mobile to desktop
+    if (lastWidth <= 768 && currentWidth > 768) {
+        sidebar.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+    }
+    
+    lastWidth = currentWidth;
+});
+
+// ==================== ACCESSIBILITY ====================
+// Close sidebar with Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && sidebar.classList.contains('active')) {
+        sidebar.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+    }
+});
+
+// ==================== SCROLL TO TOP ====================
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
+// Show scroll to top button on demand
+window.addEventListener('scroll', () => {
+    const scrollTopBtn = document.getElementById('scrollTopBtn');
+    if (scrollTopBtn) {
+        if (window.pageYOffset > 300) {
+            scrollTopBtn.style.display = 'block';
+        } else {
+            scrollTopBtn.style.display = 'none';
+        }
+    }
+});
+
+// ==================== FORM VALIDATION ====================
+function validateForm(formElement) {
+    const inputs = formElement.querySelectorAll('[required]');
+    let isValid = true;
+    
+    inputs.forEach(input => {
+        if (!input.value.trim()) {
+            input.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            input.classList.remove('is-invalid');
+        }
+    });
+    
+    return isValid;
+}
+
+// ==================== LOADING STATE ====================
+function setLoadingState(button, isLoading = true) {
+    const originalText = button.innerHTML;
+    
+    if (isLoading) {
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
+    } else {
+        button.disabled = false;
+        button.innerHTML = originalText;
+    }
+}
+
+// ==================== EXPORT UTILITIES ====================
+function downloadAsCSV(data, filename) {
+    const csv = data.map(row => 
+        row.map(cell => `"${cell}"`).join(',')
+    ).join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'export.csv';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+
+// ==================== API HELPERS ====================
+async function apiCall(url, options = {}) {
+    const defaultOptions = {
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    };
+    
+    const mergedOptions = {
+        ...defaultOptions,
+        ...options
+    };
+    
+    try {
+        const response = await fetch(url, mergedOptions);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'API Error');
+        }
+        
+        return { success: true, data };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+}
+
+// ==================== DARK MODE TOGGLE ====================
+const darkModeToggle = document.getElementById('darkModeToggle');
+
+if (darkModeToggle) {
+    darkModeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+    });
+    
+    // Check for saved dark mode preference
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark-mode');
+    }
+}
+
+// ==================== CHARTS INITIALIZATION ====================
+function initCharts() {
+    // This function can be extended with Chart.js or similar
+    const chartContainers = document.querySelectorAll('[data-chart]');
+    chartContainers.forEach(container => {
+        // Add chart initialization logic here
+        console.log('Chart initialized:', container.dataset.chart);
+    });
+}
+
+// Initialize charts on load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCharts);
+} else {
+    initCharts();
+}
 
 // ============================================================================
 // File: requirements.txt - Python Dependencies
