@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+
+{% block title %}Insights - SmartPharma AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="page-title">
+                <i class="fas fa-lightbulb text-primary"></i> Insights & Analytics
+            </h1>
+            <p class="text-muted">AI-powered recommendations and data-driven analytics</p>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="metric-card card-light-blue animate__animated animate__fadeInUp">
+                <div class="metric-icon">
+                    <i class="fas fa-recycle"></i>
+                </div>
+                <div class="metric-content">
+                    <h6 class="metric-label">Waste Prevented</h6>
+                    <h2 class="metric-value" id="wastePrevented">-</h2>
+                    <small>kg</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="metric-card card-light-green animate__animated animate__fadeInUp">
+                <div class="metric-icon">
+                    <i class="fas fa-leaf"></i>
+                </div>
+                <div class="metric-content">
+                    <h6 class="metric-label">Eco Score</h6>
+                    <h2 class="metric-value" id="avgEcoScore">-</h2>
+                    <small>/10</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="metric-card card-light-orange animate__animated animate__fadeInUp">
+                <div class="metric-icon">
+                    <i class="fas fa-fire"></i>
+                </div>
+                <div class="metric-content">
+                    <h6 class="metric-label">High Demand</h6>
+                    <h2 class="metric-value" id="highDemandCount">-</h2>
+                    <small>products</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="metric-card card-light-teal animate__animated animate__fadeInUp">
+                <div class="metric-icon">
+                    <i class="fas fa-hourglass-end"></i>
+                </div>
+                <div class="metric-content">
+                    <h6 class="metric-label">Expiring Soon</h6>
+                    <h2 class="metric-value" id="expiringCount">-</h2>
+                    <small>products</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Cards -->
+    <div class="row g-3">
+        <!-- Expiry Insights -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #FFF4E6 0%, #FFE8CC 100%); border-bottom: 2px solid #FFD699;">
+                    <h5 class="mb-0" style="color: #FF8C00;">
+                        <i class="fas fa-hourglass-end"></i> Expiring Soon (7 Days)
+                    </h5>
+                </div>
+                <div class="card-body" id="expiryInsights">
+                    <p class="text-muted">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- High Demand Products -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #E8F8F5 0%, #D5F3EB 100%); border-bottom: 2px solid #A3E4D7;">
+                    <h5 class="mb-0" style="color: #00C49A;">
+                        <i class="fas fa-chart-bar"></i> High Demand Products
+                    </h5>
+                </div>
+                <div class="card-body" id="demandInsights">
+                    <p class="text-muted">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Packaging Analysis Table -->
+    <div class="row g-3 mt-2">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #EBF5FB 0%, #D6EAF8 100%); border-bottom: 2px solid #AED6F1;">
+                    <h5 class="mb-0" style="color: #3A9BDC;">
+                        <i class="fas fa-box"></i> Packaging Analysis
+                    </h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="packagingTable">
+                        <thead class="table-light">
+                            <tr style="background: linear-gradient(135deg, #F5F7FA 0%, #E8ECF1 100%);">
+                                <th style="color: #333;">Packaging Type</th>
+                                <th style="color: #333;">Count</th>
+                                <th style="color: #333;">Avg Eco Score</th>
+                                <th style="color: #333;">Rating</th>
+                            </tr>
+                        </thead>
+                        <tbody id="packagingAnalysis">
+                            <tr><td colspan="4" class="text-center text-muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .metric-card {
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    }
+
+    .card-light-blue {
+        background: linear-gradient(135deg, #EBF5FB 0%, #D6EAF8 100%);
+        border-left: 4px solid #3A9BDC;
+    }
+
+    .card-light-green {
+        background: linear-gradient(135deg, #E8F8F5 0%, #D5F3EB 100%);
+        border-left: 4px solid #00C49A;
+    }
+
+    .card-light-orange {
+        background: linear-gradient(135deg, #FFF4E6 0%, #FFE8CC 100%);
+        border-left: 4px solid #FF8C00;
+    }
+
+    .card-light-teal {
+        background: linear-gradient(135deg, #E0F7F4 0%, #CCEAE8 100%);
+        border-left: 4px solid #1ABC9C;
+    }
+
+    .metric-icon {
+        font-size: 32px;
+        min-width: 60px;
+        text-align: center;
+        opacity: 0.8;
+    }
+
+    .card-light-blue .metric-icon {
+        color: #3A9BDC;
+    }
+
+    .card-light-green .metric-icon {
+        color: #00C49A;
+    }
+
+    .card-light-orange .metric-icon {
+        color: #FF8C00;
+    }
+
+    .card-light-teal .metric-icon {
+        color: #1ABC9C;
+    }
+
+    .metric-label {
+        color: #555;
+        font-size: 12px;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    .metric-value {
+        font-size: 36px;
+        font-weight: 700;
+        color: #333;
+        margin: 8px 0 4px 0;
+    }
+
+    .metric-content small {
+        color: #888;
+        font-size: 12px;
+    }
+
+    .card {
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .card:hover {
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    .card-body {
+        padding: 20px;
+        background: #FAFBFC;
+    }
+
+    .insight-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        margin-bottom: 8px;
+        background: white;
+        border-radius: 8px;
+        border-left: 3px solid #E8ECF1;
+        transition: all 0.3s ease;
+    }
+
+    .insight-item:hover {
+        background: #F5F7FA;
+        border-left-color: #3A9BDC;
+        transform: translateX(4px);
+    }
+
+    .insight-name {
+        flex: 1;
+    }
+
+    .insight-name strong {
+        color: #333;
+        display: block;
+        margin-bottom: 4px;
+        font-size: 14px;
+    }
+
+    .insight-name small {
+        color: #888;
+        font-size: 12px;
+    }
+
+    .insight-values {
+        text-align: right;
+    }
+
+    .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 8px;
+    }
+
+    .animate__animated {
+        animation-duration: 0.6s;
+    }
+
+    .animate__fadeInUp {
+        animation-name: fadeInUp;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translate3d(0, 40px, 0);
+        }
+        to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .metric-card {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .metric-icon {
+            min-width: auto;
+        }
+
+        .metric-value {
+            font-size: 28px;
+        }
+    }
+</style>
+
+<script>
+    function getEcoRating(score) {
+        if (score >= 8.5) return { text: 'Excellent', badge: 'bg-success' };
+        if (score >= 7.5) return { text: 'Good', badge: 'bg-info' };
+        if (score >= 6.0) return { text: 'Moderate', badge: 'bg-warning' };
+        return { text: 'Poor', badge: 'bg-danger' };
+    }
+
+    function loadInsights() {
+        fetch('/api/insights')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    displayInsights(data);
+                } else {
+                    showError('Failed to load insights');
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                showError('Connection error');
+            });
+    }
+
+    function displayInsights(data) {
+        document.getElementById('wastePrevented').textContent = (data.waste_prevented_kg || 0).toFixed(1);
+        document.getElementById('avgEcoScore').textContent = (data.avg_eco_score || 0).toFixed(1);
+        document.getElementById('highDemandCount').textContent = (data.demand_insights || []).length;
+        document.getElementById('expiringCount').textContent = (data.expiry_insights || []).length;
+
+        displayExpiryInsights(data.expiry_insights || []);
+        displayDemandInsights(data.demand_insights || []);
+        displayPackagingAnalysis(data.packaging_analysis || []);
+    }
+
+    function displayExpiryInsights(items) {
+        const container = document.getElementById('expiryInsights');
+
+        if (items.length === 0) {
+            container.innerHTML = '<p class="text-success">✅ No medicines expiring soon!</p>';
+            return;
+        }
+
+        let html = '';
+        items.slice(0, 6).forEach(item => {
+            html += `
+                <div class="insight-item">
+                    <div class="insight-name">
+                        <strong>${item.name || 'Unknown'}</strong>
+                        <small>${item.category || 'N/A'}</small>
+                    </div>
+                    <div class="insight-values">
+                        <span class="badge" style="background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%); color: white;">${item.days_left || 0} days</span><br>
+                        <small class="text-muted">Stock: ${item.stock || 0}</small>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function displayDemandInsights(items) {
+        const container = document.getElementById('demandInsights');
+
+        if (items.length === 0) {
+            container.innerHTML = '<p class="text-muted">No demand data available</p>';
+            return;
+        }
+
+        let html = '';
+        items.slice(0, 6).forEach(item => {
+            html += `
+                <div class="insight-item">
+                    <div class="insight-name">
+                        <strong>${item.name || 'Unknown'}</strong>
+                        <small>${item.category || 'N/A'}</small>
+                    </div>
+                    <div class="insight-values">
+                        <span class="badge" style="background: linear-gradient(135deg, #00C49A 0%, #27ae60 100%); color: white;">${item.predicted_demand || 0} units</span><br>
+                        <small class="text-muted">Current: ${item.current_stock || 0}</small>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function displayPackagingAnalysis(items) {
+        const container = document.getElementById('packagingAnalysis');
+
+        if (items.length === 0) {
+            container.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No packaging data</td></tr>';
+            return;
+        }
+
+        let html = '';
+        items.forEach(item => {
+            const ecoRating = getEcoRating(item.avg_eco_score || 0);
+            html += `
+                <tr>
+                    <td><strong>${item.packaging_type || 'Unknown'}</strong></td>
+                    <td><span class="badge" style="background: #D6EAF8; color: #3A9BDC;">${item.count || 0}</span></td>
+                    <td><strong style="color: #333;">${(item.avg_eco_score || 0).toFixed(1)}/10</strong></td>
+                    <td><span class="badge ${ecoRating.badge}">${ecoRating.text}</span></td>
+                </tr>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function showError(msg) {
+        console.error(msg);
+        document.getElementById('wastePrevented').textContent = '0';
+        document.getElementById('avgEcoScore').textContent = '0';
+        document.getElementById('expiryInsights').innerHTML = `<p class="text-danger">${msg}</p>`;
+    }
+
+    document.addEventListener('DOMContentLoaded', loadInsights);
+    setInterval(loadInsights, 30000);
+</script>
+
+{% endblock %}

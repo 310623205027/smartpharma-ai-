@@ -1,0 +1,509 @@
+/* ============================================================================
+   File: static/style.css - Main Stylesheet
+   ============================================================================ */
+
+:root {
+    --primary: #3A9BDC;
+    --secondary: #00C49A;
+    --accent: #F5B041;
+    --danger: #E74C3C;
+    --dark: #2C3E50;
+    --light: #F3F6FB;
+    --border-radius: 12px;
+    --shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--light);
+    color: var(--dark);
+    overflow-x: hidden;
+}
+
+/* ============================================================================
+   NAVBAR
+   ============================================================================ */
+
+.gradient-navbar {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
+    box-shadow: var(--shadow);
+    padding: 1rem 0;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white !important;
+}
+
+.navbar-brand i {
+    margin-right: 0.5rem;
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+    transition: all 0.3s ease;
+    margin: 0 0.5rem;
+}
+
+.nav-link:hover {
+    color: white !important;
+    transform: translateY(-2px);
+}
+
+/* ============================================================================
+   MAIN CONTENT
+   ============================================================================ */
+
+.main-content {
+    min-height: calc(100vh - 60px);
+    padding: 2rem 0;
+}
+
+.page-title {
+    color: var(--dark);
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+/* ============================================================================
+   METRIC CARDS
+   ============================================================================ */
+
+.metric-card {
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    z-index: 0;
+}
+
+.metric-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.metric-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+.metric-content {
+    position: relative;
+    z-index: 1;
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.card-blue {
+    background: linear-gradient(135deg, #3A9BDC 0%, #2980B9 100%);
+    color: white;
+}
+
+.card-green {
+    background: linear-gradient(135deg, #00C49A 0%, #27AE60 100%);
+    color: white;
+}
+
+.card-orange {
+    background: linear-gradient(135deg, #F5B041 0%, #E67E22 100%);
+    color: white;
+}
+
+.card-teal {
+    background: linear-gradient(135deg, #1ABC9C 0%, #16A085 100%);
+    color: white;
+}
+
+/* ============================================================================
+   CARDS & PANELS
+   ============================================================================ */
+
+.card {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+    font-weight: 600;
+    padding: 1.25rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* ============================================================================
+   TABLES
+   ============================================================================ */
+
+.table {
+    font-size: 0.95rem;
+}
+
+.table thead th {
+    border-bottom: 2px solid #DEE2E6;
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(58, 155, 220, 0.05);
+}
+
+.table td {
+    vertical-align: middle;
+    padding: 1rem 0.75rem;
+}
+
+/* ============================================================================
+   BADGES & ALERTS
+   ============================================================================ */
+
+.badge {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 50px;
+}
+
+.alert {
+    border-left: 4px solid;
+    border-radius: var(--border-radius);
+    animation: slideIn 0.3s ease;
+}
+
+.alert-warning {
+    border-left-color: var(--accent);
+}
+
+.alert-danger {
+    border-left-color: var(--danger);
+}
+
+.alert-success {
+    border-left-color: var(--secondary);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ============================================================================
+   UPLOAD AREA
+   ============================================================================ */
+
+.upload-area {
+    border: 3px dashed var(--primary);
+    border-radius: var(--border-radius);
+    padding: 3rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: rgba(58, 155, 220, 0.05);
+}
+
+.upload-area:hover {
+    background-color: rgba(58, 155, 220, 0.1);
+    border-color: var(--secondary);
+}
+
+.upload-area.dragover {
+    background-color: rgba(58, 155, 220, 0.15);
+    border-color: var(--secondary);
+    transform: scale(1.02);
+}
+
+.upload-icon {
+    font-size: 3rem;
+    color: var(--primary);
+    margin-bottom: 1rem;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+/* ============================================================================
+   BUTTONS
+   ============================================================================ */
+
+.btn {
+    padding: 0.65rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, #2980B9 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(58, 155, 220, 0.4);
+    color: white;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--secondary) 0%, #27AE60 100%);
+    color: white;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 196, 154, 0.4);
+    color: white;
+}
+
+.btn-outline-primary {
+    border: 2px solid var(--primary);
+    color: var(--primary);
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary);
+    color: white;
+}
+
+/* ============================================================================
+   CHATBOT
+   ============================================================================ */
+
+.btn-chatbot {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(58, 155, 220, 0.4);
+    transition: all 0.3s ease;
+    z-index: 999;
+}
+
+.btn-chatbot:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 25px rgba(58, 155, 220, 0.6);
+}
+
+.btn-chatbot:active {
+    transform: scale(0.95);
+}
+
+.chatbot-window {
+    border: none;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.chatbot-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    border: none;
+}
+
+.chatbot-messages {
+    height: 400px;
+    overflow-y: auto;
+    background-color: #F8F9FA;
+    padding: 1rem;
+}
+
+.message {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius);
+    max-width: 85%;
+}
+
+.bot-message {
+    background: linear-gradient(135deg, rgba(58, 155, 220, 0.1) 0%, rgba(0, 196, 154, 0.1) 100%);
+    border-left: 4px solid var(--primary);
+    margin-right: auto;
+}
+
+.user-message {
+    background: linear-gradient(135deg, var(--primary) 0%, #2980B9 100%);
+    color: white;
+    margin-left: auto;
+}
+
+.chatbot-input {
+    border-top: 1px solid #DEE2E6;
+    padding: 0.75rem;
+}
+
+/* ============================================================================
+   FORMS
+   ============================================================================ */
+
+.form-control {
+    border: 2px solid #E0E0E0;
+    border-radius: var(--border-radius);
+    padding: 0.65rem 1rem;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.2rem rgba(58, 155, 220, 0.25);
+}
+
+.form-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--dark);
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .metric-card {
+        padding: 1.5rem 1rem;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+    }
+
+    .metric-icon {
+        font-size: 2rem;
+    }
+
+    .btn-chatbot {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+        bottom: 1rem;
+        right: 1rem;
+    }
+
+    .main-content {
+        padding: 1rem 0;
+    }
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade {
+    animation: fadeIn 0.5s ease;
+}
+
+.animate-slide {
+    animation: slideUp 0.5s ease;
+}
+
+/* ============================================================================
+   UTILITY CLASSES
+   ============================================================================ */
+
+.text-primary-gradient {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.shadow-sm {
+    box-shadow: var(--shadow) !important;
+}
+
+.rounded-lg {
+    border-radius: var(--border-radius) !important;
+}
+
+.transition {
+    transition: all 0.3s ease;
+}
+:root {
+    --primary: #3A9BDC;        /* Blue */
+    --secondary: #00C49A;      /* Green */
+    --accent: #F5B041;         /* Orange */
+    --danger: #E74C3C;         /* Red */
+}

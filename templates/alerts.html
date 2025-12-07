@@ -1,0 +1,569 @@
+{% extends "base.html" %}
+
+{% block title %}Alerts - SmartPharma AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="page-title">
+                <i class="fas fa-bell text-danger"></i> Alerts & Notifications
+            </h1>
+            <p class="text-muted">Real-time pharmacy inventory alerts and critical notifications</p>
+        </div>
+    </div>
+
+    <!-- Alert Statistics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="metric-card card-blue animate__animated animate__fadeInUp">
+                <div class="metric-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="metric-content">
+                    <h6 class="metric-label">Total Alerts</h6>
+                    <h2 class="metric-value" id="totalAlerts">-</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="metric-card card-red animate__animated animate__fadeInUp">
+                <div class="metric-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <div class="metric-content">
+                    <h6 class="metric-label">Critical</h6>
+                    <h2 class="metric-value" id="criticalCount">-</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="metric-card card-orange animate__animated animate__fadeInUp">
+                <div class="metric-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="metric-content">
+                    <h6 class="metric-label">Warnings</h6>
+                    <h2 class="metric-value" id="warningCount">-</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="metric-card card-info animate__animated animate__fadeInUp">
+                <div class="metric-icon">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="metric-content">
+                    <h6 class="metric-label">Info Alerts</h6>
+                    <h2 class="metric-value" id="infoCount">-</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-primary active" onclick="filterAlerts('all')">
+                            <i class="fas fa-list"></i> All Alerts
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="filterAlerts('critical')">
+                            <i class="fas fa-circle"></i> Critical
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="filterAlerts('warning')">
+                            <i class="fas fa-triangle-exclamation"></i> Warnings
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="filterAlerts('expiry')">
+                            <i class="fas fa-hourglass-end"></i> Expiring
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="filterAlerts('stock')">
+                            <i class="fas fa-chart-line"></i> Low Stock
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts List -->
+    <div class="row">
+        <div class="col-12">
+            <div id="alertsContainer">
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted">Loading alerts...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .metric-card {
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    }
+
+    .card-blue {
+        background: linear-gradient(135deg, rgba(58, 155, 220, 0.1) 0%, rgba(58, 155, 220, 0.05) 100%);
+        border-left: 4px solid #3A9BDC;
+    }
+
+    .card-red {
+        background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(231, 76, 60, 0.05) 100%);
+        border-left: 4px solid #e74c3c;
+    }
+
+    .card-orange {
+        background: linear-gradient(135deg, rgba(243, 156, 18, 0.1) 0%, rgba(243, 156, 18, 0.05) 100%);
+        border-left: 4px solid #f39c12;
+    }
+
+    .card-info {
+        background: linear-gradient(135deg, rgba(52, 152, 219, 0.1) 0%, rgba(52, 152, 219, 0.05) 100%);
+        border-left: 4px solid #3498db;
+    }
+
+    .card-green {
+        background: linear-gradient(135deg, rgba(0, 196, 154, 0.1) 0%, rgba(0, 196, 154, 0.05) 100%);
+        border-left: 4px solid #00C49A;
+    }
+
+    .metric-icon {
+        font-size: 32px;
+        margin-bottom: 12px;
+        opacity: 0.8;
+    }
+
+    .metric-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #666;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .metric-value {
+        font-size: 36px;
+        font-weight: 700;
+        color: #333;
+        margin-top: 8px;
+    }
+
+    .alert-item {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        border-left: 5px solid;
+        transition: all 0.3s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .alert-item:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        transform: translateX(4px);
+    }
+
+    .alert-item.critical {
+        border-left-color: #e74c3c;
+        background: linear-gradient(to right, rgba(231, 76, 60, 0.03), white);
+    }
+
+    .alert-item.warning {
+        border-left-color: #f39c12;
+        background: linear-gradient(to right, rgba(243, 156, 18, 0.03), white);
+    }
+
+    .alert-item.info {
+        border-left-color: #3A9BDC;
+        background: linear-gradient(to right, rgba(58, 155, 220, 0.03), white);
+    }
+
+    .alert-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .alert-icon {
+        font-size: 24px;
+    }
+
+    .alert-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #333;
+        flex: 1;
+    }
+
+    .alert-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .badge-critical {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .badge-warning {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .badge-info {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .badge-expiry {
+        background: #ffeaa7;
+        color: #d63031;
+    }
+
+    .badge-stock {
+        background: #74b9ff;
+        color: #0984e3;
+    }
+
+    .alert-message {
+        font-size: 14px;
+        color: #555;
+        margin-bottom: 10px;
+        line-height: 1.6;
+    }
+
+    .alert-details {
+        font-size: 12px;
+        color: #888;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.02);
+        border-radius: 6px;
+    }
+
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .detail-label {
+        font-weight: 600;
+        color: #666;
+    }
+
+    .detail-value {
+        color: #333;
+        font-weight: 500;
+    }
+
+    .alert-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .action-btn {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .action-btn-dismiss {
+        background: #ecf0f1;
+        color: #555;
+    }
+
+    .action-btn-dismiss:hover {
+        background: #d8dce5;
+    }
+
+    .action-btn-view {
+        background: #3A9BDC;
+        color: white;
+    }
+
+    .action-btn-view:hover {
+        background: #2980B9;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .empty-icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+    }
+
+    .empty-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 10px;
+    }
+
+    .empty-text {
+        font-size: 14px;
+        color: #999;
+    }
+
+    .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    @media (max-width: 768px) {
+        .alert-item {
+            flex-direction: column;
+        }
+
+        .alert-details {
+            grid-template-columns: 1fr;
+        }
+
+        .metric-value {
+            font-size: 28px;
+        }
+
+        .btn-group {
+            width: 100%;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+            min-width: 100px;
+        }
+    }
+</style>
+
+<script>
+    let allAlerts = [];
+    let currentFilter = 'all';
+
+    // Load alerts on page load
+    window.addEventListener('load', loadAlerts);
+
+    // Refresh alerts every 15 seconds
+    setInterval(loadAlerts, 15000);
+
+    async function loadAlerts() {
+        try {
+            const response = await fetch('/api/alerts');
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                allAlerts = data.alerts || [];
+                updateStats(data);
+                displayAlerts();
+            } else {
+                showError('Failed to load alerts');
+            }
+        } catch (err) {
+            console.error('Error loading alerts:', err);
+            showError('Connection error. Please refresh the page.');
+        }
+    }
+
+    function updateStats(data) {
+        document.getElementById('totalAlerts').textContent = data.count || 0;
+        document.getElementById('criticalCount').textContent = data.critical_count || 0;
+        document.getElementById('warningCount').textContent = data.warning_count || 0;
+        
+        const infoCount = (data.alerts || []).filter(a => a.severity === 'info').length;
+        document.getElementById('infoCount').textContent = infoCount;
+    }
+
+    function displayAlerts() {
+        let filtered = allAlerts;
+
+        if (currentFilter === 'critical') {
+            filtered = allAlerts.filter(a => a.severity === 'critical');
+        } else if (currentFilter === 'warning') {
+            filtered = allAlerts.filter(a => a.severity === 'warning');
+        } else if (currentFilter === 'expiry') {
+            filtered = allAlerts.filter(a => a.type === 'expiry');
+        } else if (currentFilter === 'stock') {
+            filtered = allAlerts.filter(a => a.type === 'stock');
+        }
+
+        const container = document.getElementById('alertsContainer');
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">✅</div>
+                    <div class="empty-title">No Alerts</div>
+                    <div class="empty-text">All systems are operating normally!</div>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        filtered.forEach(alert => {
+            const typeIcon = getAlertIcon(alert.type);
+            const severityClass = alert.severity;
+            const badgeClass = `badge-${alert.type}`;
+
+            const detailsHtml = alert.details ? `
+                <div class="alert-details">
+                    ${Object.entries(alert.details).map(([key, value]) => `
+                        <div class="detail-item">
+                            <span class="detail-label">${formatKey(key)}:</span>
+                            <span class="detail-value">${value}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : '';
+
+            html += `
+                <div class="alert-item ${severityClass}">
+                    <div style="flex: 1;">
+                        <div class="alert-header">
+                            <span class="alert-icon">${typeIcon}</span>
+                            <span class="alert-title">${alert.product}</span>
+                            <span class="alert-badge ${badgeClass}">${alert.type}</span>
+                        </div>
+                        <div class="alert-message">${alert.message}</div>
+                        ${detailsHtml}
+                        <div style="font-size: 11px; color: #aaa; margin-top: 8px;">
+                            ${new Date(alert.timestamp).toLocaleString()}
+                        </div>
+                    </div>
+                    <div class="alert-actions">
+                        <button class="action-btn action-btn-view" onclick="viewAlertDetails(${alert.alert_id})">
+                            View
+                        </button>
+                        <button class="action-btn action-btn-dismiss" onclick="dismissAlert(${alert.alert_id})">
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function filterAlerts(type) {
+        currentFilter = type;
+
+        // Update active button
+        document.querySelectorAll('.btn-group .btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.closest('.btn').classList.add('active');
+
+        displayAlerts();
+    }
+
+    function getAlertIcon(type) {
+        const icons = {
+            'expiry': '⏰',
+            'stock': '📉',
+            'damage': '📦',
+            'other': '⚠️'
+        };
+        return icons[type] || '⚠️';
+    }
+
+    function formatKey(key) {
+        return key
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, char => char.toUpperCase());
+    }
+
+    async function viewAlertDetails(alertId) {
+        try {
+            const response = await fetch(`/api/alerts/${alertId}`);
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                const alert = data.alert;
+                const details = JSON.stringify(alert.full_details, null, 2);
+                const actions = alert.recommended_actions.map((a, i) => `${i + 1}. ${a}`).join('\n');
+                
+                alert(`
+ALERT DETAILS
+─────────────
+Product: ${alert.product_name}
+Type: ${alert.type.toUpperCase()}
+Severity: ${alert.severity.toUpperCase()}
+
+FULL DETAILS:
+${details}
+
+RECOMMENDED ACTIONS:
+${actions}
+                `);
+            }
+        } catch (err) {
+            alert('Failed to load alert details');
+        }
+    }
+
+    function dismissAlert(alertId) {
+        if (confirm('Dismiss this alert?')) {
+            fetch(`/api/alerts/dismiss/${alertId}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        loadAlerts();
+                    }
+                });
+        }
+    }
+
+    function showError(msg) {
+        const container = document.getElementById('alertsContainer');
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">❌</div>
+                <div class="empty-title">Error</div>
+                <div class="empty-text">${msg}</div>
+            </div>
+        `;
+    }
+</script>
+
+{% endblock %}

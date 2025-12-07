@@ -1,0 +1,589 @@
+{% extends "base.html" %}
+
+{% block title %}Upload & Scan - SmartPharma AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="page-title">
+                <i class="fas fa-upload text-primary"></i> Product Intake
+            </h1>
+            <p class="text-muted">Scan barcodes or upload images to add products to inventory</p>
+        </div>
+    </div>
+
+    <!-- Method Selection -->
+    <div class="row mb-4" id="methodSelection">
+        <div class="col-md-6">
+            <div class="card shadow-sm method-card" onclick="selectMethod('webcam')" style="cursor: pointer; transition: all 0.3s;">
+                <div class="card-body text-center py-5">
+                    <div style="font-size: 64px; margin-bottom: 15px;">📷</div>
+                    <h4 class="card-title">Webcam Scan</h4>
+                    <p class="text-muted">Use your device camera to scan barcode</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm method-card" onclick="selectMethod('upload')" style="cursor: pointer; transition: all 0.3s;">
+                <div class="card-body text-center py-5">
+                    <div style="font-size: 64px; margin-bottom: 15px;">📤</div>
+                    <h4 class="card-title">Upload Image</h4>
+                    <p class="text-muted">Upload a barcode image file</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts Container -->
+    <div id="alertContainer"></div>
+
+    <!-- Webcam Section -->
+    <div class="row mb-4" id="webcamSection" style="display: none;">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-camera"></i> Webcam Scanner
+                        <span class="badge bg-success float-end" id="webcamStatus">Inactive</span>
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <video id="video" style="width: 100%; max-width: 500px; border-radius: 8px; background: #000; margin: 20px 0;" autoplay playsinline></video>
+                    <canvas id="canvas" style="display: none;"></canvas>
+                    
+                    <div class="d-flex gap-2 justify-content-center flex-wrap mt-4">
+                        <button class="btn btn-primary" onclick="captureFrame()">
+                            <i class="fas fa-camera"></i> Capture Frame
+                        </button>
+                        <button class="btn btn-warning" id="toggleFlash" onclick="toggleFlash()" style="display: none;">
+                            <i class="fas fa-lightbulb"></i> Flash
+                        </button>
+                        <button class="btn btn-danger" onclick="stopWebcam()">
+                            <i class="fas fa-stop"></i> Stop
+                        </button>
+                        <button class="btn btn-secondary" onclick="backToMethod()">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="row mb-4" id="uploadSection" style="display: none;">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-upload"></i> Upload Barcode Image
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="upload-area" id="uploadArea">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📤</div>
+                        <h5>Click to upload or drag image here</h5>
+                        <p class="text-muted">PNG, JPG, JPEG, GIF, BMP (Max 16MB)</p>
+                    </div>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    
+                    <div class="d-flex gap-2 justify-content-center mt-4">
+                        <button class="btn btn-secondary" onclick="backToMethod()">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barcode Result -->
+    <div class="row mb-4" id="barcodeResultSection" style="display: none;">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow-sm border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-check-circle"></i> Barcode Detected
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="text-muted small">Barcode Value</p>
+                            <code id="detectedBarcode" style="font-size: 18px; color: #3A9BDC; font-weight: bold;">-</code>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="text-muted small">Format</p>
+                            <p id="barcodeFormat" style="font-size: 16px; font-weight: 500;">-</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 justify-content-center mt-4">
+                        <button class="btn btn-success" onclick="loadProductDetails()">
+                            <i class="fas fa-search"></i> Load Product Details
+                        </button>
+                        <button class="btn btn-secondary" onclick="backToMethod()">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Form -->
+    <div class="row mb-4" id="productFormSection" style="display: none;">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-box"></i> Product Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="productForm" onsubmit="submitProduct(event)">
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label">Product Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="productName" placeholder="e.g., Aspirin 500mg" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Category <span class="text-danger">*</span></label>
+                                <select class="form-select" id="productCategory" required>
+                                    <option value="">Select Category...</option>
+                                    <option value="Analgesics">Analgesics (Pain Relief)</option>
+                                    <option value="Antibiotics">Antibiotics</option>
+                                    <option value="Supplements">Supplements & Vitamins</option>
+                                    <option value="Diabetes">Diabetes</option>
+                                    <option value="Cardiac">Cardiac</option>
+                                    <option value="Gastric">Gastric</option>
+                                    <option value="Antihistamine">Antihistamine</option>
+                                    <option value="Cholesterol">Cholesterol</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Barcode <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="productBarcode" placeholder="Auto-filled from scan" readonly required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Manufacture Date</label>
+                                <input type="date" class="form-control" id="mfgDate">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="expiryDate" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Packaging Type <span class="text-danger">*</span></label>
+                                <select class="form-select" id="packagingType" required>
+                                    <option value="">Select Packaging...</option>
+                                    <option value="Plastic">Plastic (Eco: 3.5/10)</option>
+                                    <option value="Paper">Paper (Eco: 8.0/10)</option>
+                                    <option value="Glass">Glass (Eco: 7.5/10)</option>
+                                    <option value="Cardboard">Cardboard (Eco: 8.5/10)</option>
+                                    <option value="Metal">Metal (Eco: 7.0/10)</option>
+                                    <option value="Biodegradable">Biodegradable (Eco: 9.5/10)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Packaging Condition</label>
+                                <select class="form-select" id="packagingCondition">
+                                    <option value="Good">Good</option>
+                                    <option value="Damaged">Damaged</option>
+                                    <option value="Expired">Expired</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Stock Quantity <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="stockQuantity" min="0" placeholder="e.g., 100" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Price ($) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="productPrice" step="0.01" min="0" placeholder="e.g., 5.99" required>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-center mt-4">
+                            <button type="submit" class="btn btn-success" id="submitBtn">
+                                <i class="fas fa-plus-circle"></i> Add Product
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                                <i class="fas fa-redo"></i> Reset
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="backToMethod()">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .method-card:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+        border-color: #3A9BDC !important;
+    }
+
+    .upload-area {
+        border: 3px dashed #3A9BDC;
+        border-radius: 12px;
+        padding: 50px 30px;
+        text-align: center;
+        background: linear-gradient(135deg, #f0f8ff 0%, #f5f7fa 100%);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .upload-area:hover {
+        border-color: #00C49A;
+        background: #e8f5ff;
+        transform: scale(1.02);
+    }
+
+    .upload-area.dragover {
+        border-color: #00C49A;
+        background: #d4e9ff;
+    }
+
+    #video {
+        transform: scaleX(-1);
+    }
+
+    .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 3px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+<script>
+    let currentBarcode = null;
+    let stream = null;
+
+    // ============================================================================
+    // METHOD SELECTION
+    // ============================================================================
+
+    function selectMethod(method) {
+        document.getElementById('methodSelection').style.display = 'none';
+        clearAlerts();
+
+        if (method === 'webcam') {
+            document.getElementById('webcamSection').style.display = 'block';
+            startWebcam();
+        } else {
+            document.getElementById('uploadSection').style.display = 'block';
+            setupUploadArea();
+        }
+    }
+
+    function backToMethod() {
+        document.getElementById('methodSelection').style.display = 'block';
+        document.getElementById('webcamSection').style.display = 'none';
+        document.getElementById('uploadSection').style.display = 'none';
+        document.getElementById('barcodeResultSection').style.display = 'none';
+        document.getElementById('productFormSection').style.display = 'none';
+        stopWebcam();
+        clearAlerts();
+    }
+
+    // ============================================================================
+    // WEBCAM FUNCTIONALITY
+    // ============================================================================
+
+    async function startWebcam() {
+        try {
+            const video = document.getElementById('video');
+            
+            // Request camera with environment facing mode (back camera)
+            const constraints = {
+                video: {
+                    facingMode: 'environment',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            };
+
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = stream;
+
+            // Ensure video plays
+            video.onloadedmetadata = () => {
+                video.play().catch(e => console.error('Play error:', e));
+            };
+
+            document.getElementById('webcamStatus').textContent = 'Active';
+            document.getElementById('webcamStatus').classList.add('bg-success');
+            showAlert('Camera started. Point at the barcode and click Capture.', 'info');
+
+        } catch (err) {
+            showAlert('Cannot access camera: ' + err.message, 'danger');
+            backToMethod();
+        }
+    }
+
+    function stopWebcam() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        document.getElementById('webcamStatus').textContent = 'Inactive';
+        document.getElementById('webcamStatus').classList.remove('bg-success');
+    }
+
+    function captureFrame() {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size to match video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        // Draw video frame to canvas
+        ctx.drawImage(video, 0, 0);
+
+        // Convert to blob and process
+        canvas.toBlob(blob => {
+            const formData = new FormData();
+            formData.append('file', blob, 'capture.jpg');
+            processBarcode(formData);
+        }, 'image/jpeg', 0.95);
+    }
+
+    function toggleFlash() {
+        // Flash toggle functionality for supported devices
+        if (stream) {
+            const videoTrack = stream.getVideoTracks()[0];
+            if (videoTrack) {
+                videoTrack.getCapabilities().torch
+                    ? videoTrack.applyConstraints({ torch: !videoTrack.torch })
+                    : showAlert('Flash not supported on this device', 'info');
+            }
+        }
+    }
+
+    // ============================================================================
+    // UPLOAD FUNCTIONALITY
+    // ============================================================================
+
+    function setupUploadArea() {
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.onclick = () => fileInput.click();
+
+        uploadArea.ondragover = (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        };
+
+        uploadArea.ondragleave = () => {
+            uploadArea.classList.remove('dragover');
+        };
+
+        uploadArea.ondrop = (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileUpload();
+            }
+        };
+
+        fileInput.onchange = handleFileUpload;
+    }
+
+    function handleFileUpload() {
+        const file = document.getElementById('fileInput').files[0];
+        if (!file) return;
+
+        if (file.size > 16 * 1024 * 1024) {
+            showAlert('File size exceeds 16MB limit', 'danger');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        processBarcode(formData);
+    }
+
+    // ============================================================================
+    // BARCODE PROCESSING
+    // ============================================================================
+
+    function processBarcode(formData) {
+        showAlert('Processing barcode...', 'info');
+
+        fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                currentBarcode = data.barcode || data.data?.barcode;
+                document.getElementById('detectedBarcode').textContent = currentBarcode;
+                document.getElementById('barcodeFormat').textContent = data.format || data.data?.format || 'Unknown';
+                document.getElementById('productBarcode').value = currentBarcode;
+
+                document.getElementById('webcamSection').style.display = 'none';
+                document.getElementById('uploadSection').style.display = 'none';
+                document.getElementById('barcodeResultSection').style.display = 'block';
+
+                showAlert('Barcode detected successfully!', 'success');
+            } else {
+                showAlert(data.message || 'Failed to detect barcode. Try again.', 'danger');
+            }
+        })
+        .catch(err => {
+            showAlert('Error processing barcode: ' + err.message, 'danger');
+        });
+    }
+
+    // ============================================================================
+    // PRODUCT DETAILS AUTO-FILL
+    // ============================================================================
+
+    function loadProductDetails() {
+        if (!currentBarcode) {
+            showAlert('No barcode detected', 'danger');
+            return;
+        }
+
+        showAlert('Loading product details...', 'info');
+
+        fetch(`/api/product-by-barcode?barcode=${encodeURIComponent(currentBarcode)}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('barcodeResultSection').style.display = 'none';
+            document.getElementById('productFormSection').style.display = 'block';
+
+            if (data.status === 'success' && data.data) {
+                const product = data.data;
+                document.getElementById('productName').value = product.name || '';
+                document.getElementById('productCategory').value = product.category || '';
+                document.getElementById('mfgDate').value = product.mfg_date || '';
+                document.getElementById('expiryDate').value = product.expiry_date || '';
+                document.getElementById('packagingType').value = product.packaging_type || '';
+                document.getElementById('stockQuantity').value = product.stock_quantity || 1;
+                document.getElementById('productPrice').value = product.price || 0;
+                
+                showAlert('Product found in database. Review and submit.', 'success');
+            } else {
+                showAlert('Product not found. Please fill details manually.', 'info');
+            }
+        })
+        .catch(err => {
+            document.getElementById('productFormSection').style.display = 'block';
+            showAlert('Continuing without product lookup...', 'info');
+        });
+    }
+
+    // ============================================================================
+    // FORM SUBMISSION
+    // ============================================================================
+
+    function submitProduct(event) {
+        event.preventDefault();
+
+        const data = {
+            name: document.getElementById('productName').value,
+            category: document.getElementById('productCategory').value,
+            barcode: document.getElementById('productBarcode').value,
+            expiry_date: document.getElementById('expiryDate').value,
+            packaging_type: document.getElementById('packagingType').value,
+            stock_quantity: document.getElementById('stockQuantity').value,
+            price: document.getElementById('productPrice').value
+        };
+
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span> Adding...';
+
+        fetch('/api/add-product', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(data => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-plus-circle"></i> Add Product';
+
+            if (data.status === 'success') {
+                showAlert('Product added successfully!', 'success');
+                setTimeout(() => {
+                    resetForm();
+                    backToMethod();
+                }, 2000);
+            } else {
+                showAlert(data.message || 'Failed to add product', 'danger');
+            }
+        })
+        .catch(err => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-plus-circle"></i> Add Product';
+            showAlert('Error: ' + err.message, 'danger');
+        });
+    }
+
+    // ============================================================================
+    // UTILITIES
+    // ============================================================================
+
+    function resetForm() {
+        document.getElementById('productForm').reset();
+        document.getElementById('productBarcode').value = '';
+        currentBarcode = null;
+    }
+
+    function showAlert(message, type) {
+        const container = document.getElementById('alertContainer');
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        container.appendChild(alertDiv);
+
+        setTimeout(() => {
+            alertDiv.classList.remove('show');
+            setTimeout(() => alertDiv.remove(), 150);
+        }, 5000);
+    }
+
+    function clearAlerts() {
+        document.getElementById('alertContainer').innerHTML = '';
+    }
+</script>
+
+{% endblock %}

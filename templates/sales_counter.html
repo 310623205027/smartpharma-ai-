@@ -1,0 +1,598 @@
+{% extends "base.html" %}
+
+{% block title %}Sales Counter - SmartPharma AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="page-title">
+                <i class="fas fa-shopping-cart text-success"></i> Sales Counter
+            </h1>
+            <p class="text-muted">Process medicine sales and manage inventory in real-time</p>
+        </div>
+    </div>
+
+    <!-- Sales Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="metric-card card-green animate__animated animate__fadeInUp">
+                <div class="metric-icon">
+                    <i class="fas fa-shopping-bag"></i>
+                </div>
+                <div class="metric-content">
+                    <h6 class="metric-label">Today's Sales</h6>
+                    <h2 class="metric-value" id="todaysSales">0</h2>
+                    <small>transactions</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="metric-card card-blue animate__animated animate__fadeInUp">
+                <div class="metric-icon">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="metric-content">
+                    <h6 class="metric-label">Revenue</h6>
+                    <h2 class="metric-value" id="totalRevenue">$0</h2>
+                    <small>today</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="metric-card card-orange animate__animated animate__fadeInUp">
+                <div class="metric-icon">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <div class="metric-content">
+                    <h6 class="metric-label">Units Sold</h6>
+                    <h2 class="metric-value" id="unitsSold">0</h2>
+                    <small>strips today</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="metric-card card-teal animate__animated animate__fadeInUp">
+                <div class="metric-icon">
+                    <i class="fas fa-file-download"></i>
+                </div>
+                <div class="metric-content">
+                    <h6 class="metric-label">Generate Report</h6>
+                    <button class="btn btn-sm btn-success mt-2" onclick="downloadReport()">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts Container -->
+    <div id="alertContainer"></div>
+
+    <!-- Sales Counter Section -->
+    <div class="row mb-4">
+        <div class="col-lg-6 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #00C49A 0%, #27ae60 100%); color: white;">
+                    <h5 class="mb-0">
+                        <i class="fas fa-barcode"></i> Barcode Scanner
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Upload Area -->
+                    <div class="upload-area" id="uploadArea">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📤</div>
+                        <h5>Click to upload or drag barcode image</h5>
+                        <p class="text-muted">PNG, JPG, GIF (Max 5MB)</p>
+                    </div>
+                    <input type="file" id="barcodeFile" accept="image/*" style="display: none;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Details Section -->
+    <div class="row mb-4" id="productSection" style="display: none;">
+        <div class="col-lg-6 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #3A9BDC 0%, #2980B9 100%); color: white;">
+                    <h5 class="mb-0">
+                        <i class="fas fa-box"></i> Product Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="product-info">
+                        <div class="info-row">
+                            <span class="info-label">Product Name:</span>
+                            <span class="info-value" id="productName">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Barcode:</span>
+                            <span class="info-value" id="productBarcode" style="font-family: monospace;">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Category:</span>
+                            <span class="info-value" id="productCategory">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Price per Strip:</span>
+                            <span class="info-value" id="productPrice" style="color: #27ae60; font-weight: bold;">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Available Stock:</span>
+                            <span class="info-value" id="productStock">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Expiry Date:</span>
+                            <span class="info-value" id="productExpiry">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quantity Entry Section -->
+    <div class="row mb-4" id="quantitySection" style="display: none;">
+        <div class="col-lg-6 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #FF8C00 0%, #FFA500 100%); color: white;">
+                    <h5 class="mb-0">
+                        <i class="fas fa-plus-circle"></i> Enter Quantity
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Number of Strips to Sell</label>
+                        <div class="input-group" style="font-size: 18px;">
+                            <button class="btn btn-outline-secondary" type="button" onclick="decreaseQuantity()">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <input type="number" class="form-control text-center" id="quantityInput" min="1" value="1" style="font-size: 24px; font-weight: bold;">
+                            <button class="btn btn-outline-secondary" type="button" onclick="increaseQuantity()">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted d-block mt-2" id="stockWarning"></small>
+                    </div>
+
+                    <!-- Price Calculation -->
+                    <div class="price-summary">
+                        <div class="summary-row">
+                            <span>Unit Price:</span>
+                            <span id="unitPrice">$0</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Quantity:</span>
+                            <span id="quantityDisplay">1</span>
+                        </div>
+                        <div class="summary-row" style="border-top: 2px solid #E8ECF1; padding-top: 10px; margin-top: 10px; font-weight: bold; font-size: 18px;">
+                            <span>Total Amount:</span>
+                            <span id="totalAmount" style="color: #27ae60;">$0</span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button class="btn btn-success flex-grow-1" onclick="completeSale()">
+                            <i class="fas fa-check-circle"></i> Complete Sale
+                        </button>
+                        <button class="btn btn-secondary flex-grow-1" onclick="resetCounter()">
+                            <i class="fas fa-times-circle"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Transactions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list"></i> Today's Transactions
+                    </h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="transactionsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Time</th>
+                                <th>Product</th>
+                                <th>Barcode</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsBody">
+                            <tr><td colspan="6" class="text-center text-muted py-4">No transactions yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .metric-card {
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    }
+
+    .card-green {
+        background: linear-gradient(135deg, #E8F8F5 0%, #D5F3EB 100%);
+        border-left: 4px solid #00C49A;
+    }
+
+    .card-blue {
+        background: linear-gradient(135deg, #EBF5FB 0%, #D6EAF8 100%);
+        border-left: 4px solid #3A9BDC;
+    }
+
+    .card-orange {
+        background: linear-gradient(135deg, #FFF4E6 0%, #FFE8CC 100%);
+        border-left: 4px solid #FF8C00;
+    }
+
+    .card-teal {
+        background: linear-gradient(135deg, #E0F7F4 0%, #CCEAE8 100%);
+        border-left: 4px solid #1ABC9C;
+    }
+
+    .metric-icon {
+        font-size: 32px;
+        min-width: 60px;
+        text-align: center;
+    }
+
+    .card-green .metric-icon { color: #00C49A; }
+    .card-blue .metric-icon { color: #3A9BDC; }
+    .card-orange .metric-icon { color: #FF8C00; }
+    .card-teal .metric-icon { color: #1ABC9C; }
+
+    .metric-label {
+        color: #555;
+        font-size: 12px;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .metric-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #333;
+        margin: 8px 0 0 0;
+    }
+
+    .upload-area {
+        border: 3px dashed #3A9BDC;
+        border-radius: 12px;
+        padding: 50px 30px;
+        text-align: center;
+        background: linear-gradient(135deg, #f0f8ff 0%, #f5f7fa 100%);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .upload-area:hover {
+        border-color: #00C49A;
+        background: #e8f5ff;
+        transform: scale(1.02);
+    }
+
+    .upload-area.dragover {
+        border-color: #00C49A;
+        background: #d4e9ff;
+    }
+
+    .product-info {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 20px;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #E8ECF1;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: #555;
+    }
+
+    .info-value {
+        color: #333;
+        font-weight: 500;
+    }
+
+    .price-summary {
+        background: linear-gradient(135deg, #F0F8FF 0%, #F5F7FA 100%);
+        border-radius: 8px;
+        padding: 15px;
+        border-left: 4px solid #3A9BDC;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        color: #333;
+    }
+
+    .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 8px;
+    }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.3.6/quagga.min.js"></script>
+<script>
+    let currentProduct = null;
+    let currentBarcode = null;
+
+    // Setup upload area
+    function setupUploadArea() {
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('barcodeFile');
+
+        uploadArea.onclick = () => fileInput.click();
+
+        uploadArea.ondragover = (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        };
+
+        uploadArea.ondragleave = () => {
+            uploadArea.classList.remove('dragover');
+        };
+
+        uploadArea.ondrop = (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                handleBarcodeUpload();
+            }
+        };
+
+        fileInput.onchange = handleBarcodeUpload;
+    }
+
+    function handleBarcodeUpload() {
+        const file = document.getElementById('barcodeFile').files[0];
+        if (!file) return;
+
+        showAlert('Scanning barcode...', 'info');
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                Quagga.decodeSingle({
+                    src: e.target.result,
+                    numOfWorkers: 2,
+                    inputStream: { size: 800 },
+                    decoder: {
+                        readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader", "upc_reader", "upc_e_reader", "i2of5_reader"]
+                    }
+                }, (result) => {
+                    if (result && result.codeResult) {
+                        fetchProductDetails(result.codeResult.code);
+                    } else {
+                        showAlert('No barcode detected. Try another image.', 'warning');
+                    }
+                });
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function fetchProductDetails(barcode) {
+        currentBarcode = barcode;
+
+        fetch(`/api/product-by-barcode?barcode=${encodeURIComponent(barcode)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success' && data.data) {
+                    currentProduct = data.data;
+                    displayProductDetails(data.data);
+                    showAlert('Product found! Enter quantity to proceed.', 'success');
+                } else {
+                    showAlert('Product not found in database.', 'danger');
+                    resetCounter();
+                }
+            })
+            .catch(err => {
+                showAlert('Error fetching product: ' + err.message, 'danger');
+            });
+    }
+
+    function displayProductDetails(product) {
+        document.getElementById('productName').textContent = product.name || '-';
+        document.getElementById('productBarcode').textContent = product.barcode || '-';
+        document.getElementById('productCategory').textContent = product.category || '-';
+        document.getElementById('productPrice').textContent = `$${(product.price || 0).toFixed(2)}`;
+        document.getElementById('productStock').textContent = `${product.stock_quantity || 0} strips`;
+        document.getElementById('productExpiry').textContent = product.expiry_date || '-';
+
+        document.getElementById('productSection').style.display = 'block';
+        document.getElementById('quantitySection').style.display = 'block';
+
+        updatePriceCalculation();
+    }
+
+    function increaseQuantity() {
+        const input = document.getElementById('quantityInput');
+        const max = currentProduct.stock_quantity;
+        if (parseInt(input.value) < max) {
+            input.value = parseInt(input.value) + 1;
+            updatePriceCalculation();
+        } else {
+            showAlert('Cannot exceed available stock!', 'warning');
+        }
+    }
+
+    function decreaseQuantity() {
+        const input = document.getElementById('quantityInput');
+        if (parseInt(input.value) > 1) {
+            input.value = parseInt(input.value) - 1;
+            updatePriceCalculation();
+        }
+    }
+
+    function updatePriceCalculation() {
+        const quantity = parseInt(document.getElementById('quantityInput').value);
+        const unitPrice = currentProduct.price || 0;
+        const total = quantity * unitPrice;
+
+        document.getElementById('quantityDisplay').textContent = quantity;
+        document.getElementById('unitPrice').textContent = `$${unitPrice.toFixed(2)}`;
+        document.getElementById('totalAmount').textContent = `$${total.toFixed(2)}`;
+
+        const stockWarning = document.getElementById('stockWarning');
+        if (quantity > currentProduct.stock_quantity) {
+            stockWarning.textContent = '⚠️ Quantity exceeds available stock!';
+            stockWarning.style.color = '#e74c3c';
+        } else {
+            stockWarning.textContent = `${currentProduct.stock_quantity - quantity} strips remaining after sale`;
+            stockWarning.style.color = '#27ae60';
+        }
+    }
+
+    function completeSale() {
+        const quantity = parseInt(document.getElementById('quantityInput').value);
+
+        if (quantity > currentProduct.stock_quantity) {
+            showAlert('Insufficient stock!', 'danger');
+            return;
+        }
+
+        const saleData = {
+            barcode: currentBarcode,
+            quantity: quantity,
+            amount: quantity * currentProduct.price,
+            product_id: currentProduct.id
+        };
+
+        fetch('/api/record-sale', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(saleData)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showAlert('Sale completed successfully!', 'success');
+                addTransactionToTable(saleData);
+                loadSalesStats();
+                resetCounter();
+            } else {
+                showAlert(data.message || 'Failed to record sale', 'danger');
+            }
+        })
+        .catch(err => showAlert('Error: ' + err.message, 'danger'));
+    }
+
+    function addTransactionToTable(sale) {
+        const table = document.getElementById('transactionsBody');
+        if (table.querySelector('tr td[colspan]')) {
+            table.innerHTML = '';
+        }
+
+        const row = document.createElement('tr');
+        const now = new Date();
+        const time = now.toLocaleTimeString();
+
+        row.innerHTML = `
+            <td>${time}</td>
+            <td><strong>${currentProduct.name}</strong></td>
+            <td><code>${sale.barcode}</code></td>
+            <td>${sale.quantity}</td>
+            <td>$${currentProduct.price.toFixed(2)}</td>
+            <td><strong>$${sale.amount.toFixed(2)}</strong></td>
+        `;
+        table.insertBefore(row, table.firstChild);
+    }
+
+    function loadSalesStats() {
+        fetch('/api/sales-stats')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('todaysSales').textContent = data.total_transactions;
+                    document.getElementById('totalRevenue').textContent = `$${data.total_revenue.toFixed(2)}`;
+                    document.getElementById('unitsSold').textContent = data.total_units;
+                }
+            })
+            .catch(err => console.error('Error loading stats:', err));
+    }
+
+    function downloadReport() {
+        window.location.href = '/api/sales-report/download';
+    }
+
+    function resetCounter() {
+        currentProduct = null;
+        currentBarcode = null;
+        document.getElementById('productSection').style.display = 'none';
+        document.getElementById('quantitySection').style.display = 'none';
+        document.getElementById('quantityInput').value = 1;
+        document.getElementById('barcodeFile').value = '';
+    }
+
+    function showAlert(message, type) {
+        const container = document.getElementById('alertContainer');
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        container.appendChild(alertDiv);
+
+        setTimeout(() => {
+            alertDiv.classList.remove('show');
+            setTimeout(() => alertDiv.remove(), 150);
+        }, 5000);
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        setupUploadArea();
+        loadSalesStats();
+        setInterval(loadSalesStats, 30000);
+    });
+
+    // Quantity input change listener
+    document.getElementById('quantityInput').addEventListener('change', updatePriceCalculation);
+</script>
+
+{% endblock %}
