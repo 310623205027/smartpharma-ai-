@@ -59,6 +59,10 @@ class Database:
         except Exception as e:
             logger.error(f"✗ Error disconnecting: {e}")
 
+    def close(self):
+        """Alias for disconnect() to prevent missing method errors"""
+        self.disconnect()
+
     def get_cursor(self):
         """Return a new cursor, ensuring the connection is alive"""
         conn = self.connect()
