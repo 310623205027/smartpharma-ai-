@@ -11,7 +11,7 @@ from openpyxl.styles import Font, PatternFill
 # Import custom modules
 from database import Database
 from chatbot import PharmacyChatbot
-from pyzbar.pyzbar import decode
+
 from PIL import Image
 
 load_dotenv()
