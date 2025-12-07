@@ -1,11 +1,14 @@
-# ============================================================================
-# File: database.py - Fixed PostgreSQL Database Management
-# ============================================================================
-
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, timedelta
 import os
+from dotenv import load_dotenv
+import logging
+
+load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class Database:
     """Handle all database operations for SmartPharma AI"""
@@ -14,34 +17,38 @@ class Database:
         """Initialize database connection parameters"""
         self.host = os.getenv('DB_HOST', 'localhost')
         self.user = os.getenv('DB_USER', 'postgres')
-        self.password = os.getenv('DB_PASSWORD', 'password')
+        self.password = os.getenv('DB_PASSWORD', '2006')
         self.database = os.getenv('DB_NAME', 'smartpharma_db')
-        self.port = os.getenv('DB_PORT', 5432)
+        self.port = int(os.getenv('DB_PORT', 5432))
         self.conn = None
     
     def connect(self):
         """Establish connection to PostgreSQL database"""
         try:
-            if self.conn is None:
+            if self.conn is None or self.conn.closed:
                 self.conn = psycopg2.connect(
                     host=self.host,
                     user=self.user,
                     password=self.password,
                     database=self.database,
-                    port=self.port
+                    port=self.port,
+                    connect_timeout=5
                 )
-                print("✅ Database connected successfully")
+                logger.info("✓ Database connected successfully")
             return self.conn
         except Exception as e:
-            print(f"❌ Database connection failed: {e}")
+            logger.error(f"✗ Database connection failed: {e}")
             raise
     
     def disconnect(self):
         """Close database connection"""
-        if self.conn:
-            self.conn.close()
-            self.conn = None
-            print("✅ Database disconnected")
+        try:
+            if self.conn and not self.conn.closed:
+                self.conn.close()
+                self.conn = None
+                logger.info("✓ Database disconnected")
+        except Exception as e:
+            logger.error(f"✗ Error disconnecting: {e}")
     
     def create_tables(self):
         """Create necessary tables if they don't exist"""
@@ -49,7 +56,7 @@ class Database:
             conn = self.connect()
             cursor = conn.cursor()
             
-            # Products table
+            # Products table - WITHOUT mfg_date
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS products (
                     id SERIAL PRIMARY KEY,
@@ -57,45 +64,55 @@ class Database:
                     category VARCHAR(100),
                     barcode VARCHAR(100) UNIQUE,
                     expiry_date DATE,
-                    mfg_date DATE,
                     packaging_type VARCHAR(50),
                     eco_score FLOAT DEFAULT 5.0,
                     stock_quantity INT DEFAULT 0,
-                    price FLOAT,
+                    price FLOAT DEFAULT 0.0,
                     added_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
+                )
             """)
             
             # Alerts table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS alerts (
                     id SERIAL PRIMARY KEY,
-                    product_id INT REFERENCES products(id),
+                    product_id INT REFERENCES products(id) ON DELETE CASCADE,
                     alert_type VARCHAR(50),
                     severity VARCHAR(20),
                     message TEXT,
                     is_read BOOLEAN DEFAULT FALSE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
+                )
             """)
             
             # Transactions table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS transactions (
                     id SERIAL PRIMARY KEY,
-                    product_id INT REFERENCES products(id),
+                    product_id INT REFERENCES products(id) ON DELETE CASCADE,
                     quantity_change INT,
                     transaction_type VARCHAR(50),
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     notes TEXT
-                );
+                )
+            """)
+            
+            # Chat history table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS chat_history (
+                    id SERIAL PRIMARY KEY,
+                    user_message TEXT,
+                    bot_response TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             """)
             
             conn.commit()
-            print("✅ Database tables created successfully")
+            cursor.close()
+            logger.info("✓ Database tables created successfully")
         except Exception as e:
-            print(f"❌ Error creating tables: {e}")
+            logger.error(f"✗ Error creating tables: {e}")
             if conn:
                 conn.rollback()
     
@@ -105,24 +122,29 @@ class Database:
             conn = self.connect()
             cursor = conn.cursor()
             
+            # mfg_date parameter is accepted but not used (for backwards compatibility)
             cursor.execute("""
-                INSERT INTO products (name, category, barcode, expiry_date, mfg_date, packaging_type, eco_score, stock_quantity, price)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id;
-            """, (name, category, barcode, expiry_date, mfg_date, packaging_type, eco_score, stock_quantity, price))
+                INSERT INTO products 
+                (name, category, barcode, expiry_date, packaging_type, eco_score, stock_quantity, price)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (name, category, barcode, expiry_date, packaging_type, float(eco_score), int(stock_quantity), float(price)))
             
             product_id = cursor.fetchone()[0]
             conn.commit()
-            print(f"✅ Product '{name}' added with ID {product_id}")
+            cursor.close()
+            logger.info(f"✓ Product '{name}' added with ID {product_id}")
             return product_id
         except psycopg2.IntegrityError as e:
-            print(f"❌ Product already exists: {barcode}")
             conn.rollback()
+            cursor.close()
+            logger.error(f"✗ Product barcode already exists: {barcode}")
             return None
         except Exception as e:
-            print(f"❌ Error inserting product: {e}")
             if conn:
                 conn.rollback()
+            cursor.close()
+            logger.error(f"✗ Error inserting product: {e}")
             return None
     
     def get_all_products(self):
@@ -131,23 +153,29 @@ class Database:
             conn = self.connect()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
-            cursor.execute("SELECT * FROM products WHERE stock_quantity > 0 ORDER BY added_on DESC;")
-            products = cursor.fetchall()
+            cursor.execute("""
+                SELECT id, name, category, barcode, expiry_date, 
+                       packaging_type, eco_score, stock_quantity, price, added_on
+                FROM products 
+                ORDER BY added_on DESC
+            """)
             
-            # Convert to list of dicts with proper date formatting
+            products = cursor.fetchall()
+            cursor.close()
+            
             result = []
             for p in products:
                 product_dict = dict(p)
-                # Convert date objects to strings
                 if product_dict.get('expiry_date'):
                     product_dict['expiry_date'] = product_dict['expiry_date'].strftime('%Y-%m-%d')
-                if product_dict.get('mfg_date'):
-                    product_dict['mfg_date'] = product_dict['mfg_date'].strftime('%Y-%m-%d')
+                if product_dict.get('added_on'):
+                    product_dict['added_on'] = product_dict['added_on'].strftime('%Y-%m-%d %H:%M:%S')
                 result.append(product_dict)
             
+            logger.info(f"✓ Retrieved {len(result)} products")
             return result
         except Exception as e:
-            print(f"❌ Error fetching products: {e}")
+            logger.error(f"✗ Error fetching products: {e}")
             return []
     
     def get_product_by_barcode(self, barcode):
@@ -156,23 +184,56 @@ class Database:
             conn = self.connect()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
-            cursor.execute("SELECT * FROM products WHERE barcode = %s;", (barcode,))
+            cursor.execute("""
+                SELECT id, name, category, barcode, expiry_date, 
+                       packaging_type, eco_score, stock_quantity, price
+                FROM products 
+                WHERE barcode = %s
+            """, (barcode,))
+            
             product = cursor.fetchone()
+            cursor.close()
             
             if product:
                 product_dict = dict(product)
-                # Convert date objects to strings
                 if product_dict.get('expiry_date'):
                     product_dict['expiry_date'] = product_dict['expiry_date'].strftime('%Y-%m-%d')
-                if product_dict.get('mfg_date'):
-                    product_dict['mfg_date'] = product_dict['mfg_date'].strftime('%Y-%m-%d')
+                logger.info(f"✓ Product found: {product_dict['name']}")
+                return product_dict
+            
+            logger.warning(f"✗ Product not found with barcode: {barcode}")
+            return None
+        except Exception as e:
+            logger.error(f"✗ Error fetching product by barcode: {e}")
+            return None
+    
+    def get_product_by_id(self, product_id):
+        """Get product by ID"""
+        try:
+            conn = self.connect()
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            
+            cursor.execute("""
+                SELECT id, name, category, barcode, expiry_date, 
+                       packaging_type, eco_score, stock_quantity, price
+                FROM products 
+                WHERE id = %s
+            """, (product_id,))
+            
+            product = cursor.fetchone()
+            cursor.close()
+            
+            if product:
+                product_dict = dict(product)
+                if product_dict.get('expiry_date'):
+                    product_dict['expiry_date'] = product_dict['expiry_date'].strftime('%Y-%m-%d')
                 return product_dict
             return None
         except Exception as e:
-            print(f"❌ Error fetching product: {e}")
+            logger.error(f"✗ Error fetching product by ID: {e}")
             return None
     
-    def get_expiring_products(self, days=4):
+    def get_expiring_products(self, days=7):
         """Get products expiring within specified days"""
         try:
             conn = self.connect()
@@ -182,58 +243,92 @@ class Database:
             today = datetime.now().date()
             
             cursor.execute("""
-                SELECT * FROM products 
+                SELECT id, name, category, barcode, expiry_date, 
+                       packaging_type, eco_score, stock_quantity, price
+                FROM products 
                 WHERE expiry_date <= %s AND expiry_date >= %s
-                ORDER BY expiry_date ASC;
+                AND stock_quantity > 0
+                ORDER BY expiry_date ASC
             """, (future_date, today))
             
             products = cursor.fetchall()
+            cursor.close()
             
-            # Convert to list of dicts with proper date formatting
             result = []
             for p in products:
                 product_dict = dict(p)
                 if product_dict.get('expiry_date'):
                     product_dict['expiry_date'] = product_dict['expiry_date'].strftime('%Y-%m-%d')
-                if product_dict.get('mfg_date'):
-                    product_dict['mfg_date'] = product_dict['mfg_date'].strftime('%Y-%m-%d')
                 result.append(product_dict)
             
-            print(f"✅ Found {len(result)} expiring products")
+            logger.info(f"✓ Found {len(result)} expiring products")
             return result
         except Exception as e:
-            print(f"❌ Error fetching expiring products: {e}")
+            logger.error(f"✗ Error fetching expiring products: {e}")
+            # Important: close cursor to avoid transaction abort issues
+            if cursor:
+                cursor.close()
             return []
     
-    def get_low_stock_products(self, threshold=20):
+    def get_low_stock_products(self, threshold=50):
         """Get products with low stock quantity"""
         try:
             conn = self.connect()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             
             cursor.execute("""
-                SELECT * FROM products 
-                WHERE stock_quantity < %s AND stock_quantity > 0
-                ORDER BY stock_quantity ASC;
+                SELECT id, name, category, barcode, expiry_date, 
+                       packaging_type, eco_score, stock_quantity, price
+                FROM products 
+                WHERE stock_quantity > 0 AND stock_quantity < %s
+                ORDER BY stock_quantity ASC
             """, (threshold,))
             
             products = cursor.fetchall()
+            cursor.close()
             
-            # Convert to list of dicts with proper date formatting
             result = []
             for p in products:
                 product_dict = dict(p)
                 if product_dict.get('expiry_date'):
                     product_dict['expiry_date'] = product_dict['expiry_date'].strftime('%Y-%m-%d')
-                if product_dict.get('mfg_date'):
-                    product_dict['mfg_date'] = product_dict['mfg_date'].strftime('%Y-%m-%d')
                 result.append(product_dict)
             
-            print(f"✅ Found {len(result)} low stock products")
+            logger.info(f"✓ Found {len(result)} low stock products")
             return result
         except Exception as e:
-            print(f"❌ Error fetching low stock products: {e}")
+            logger.error(f"✗ Error fetching low stock products: {e}")
+            if cursor:
+                cursor.close()
             return []
+    
+    def update_stock(self, product_id, quantity_change):
+        """Update product stock quantity"""
+        try:
+            conn = self.connect()
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                UPDATE products 
+                SET stock_quantity = stock_quantity + %s,
+                    updated_on = CURRENT_TIMESTAMP
+                WHERE id = %s
+                RETURNING stock_quantity
+            """, (quantity_change, product_id))
+            
+            new_stock = cursor.fetchone()
+            conn.commit()
+            cursor.close()
+            
+            if new_stock:
+                logger.info(f"✓ Stock updated for product {product_id}: {new_stock[0]} units")
+                return new_stock[0]
+            return None
+        except Exception as e:
+            conn.rollback()
+            cursor.close()
+            logger.error(f"✗ Error updating stock: {e}")
+            return None
     
     def add_sample_data(self):
         """Add sample data for testing"""
@@ -241,131 +336,49 @@ class Database:
             conn = self.connect()
             cursor = conn.cursor()
             
-            # Check if data already exists
-            cursor.execute("SELECT COUNT(*) FROM products;")
+            cursor.execute("SELECT COUNT(*) FROM products")
             if cursor.fetchone()[0] > 0:
-                print("✅ Sample data already exists")
+                logger.info("✓ Sample data already exists")
+                cursor.close()
                 return
             
             sample_products = [
-                ('Aspirin 500mg', 'Analgesics', 'ASP001', (datetime.now() + timedelta(days=2)).date(), (datetime.now() - timedelta(days=300)).date(), 'Cardboard', 8.5, 150, 5.99),
-                ('Amoxicillin 250mg', 'Antibiotics', 'AMX001', (datetime.now() + timedelta(days=1)).date(), (datetime.now() - timedelta(days=365)).date(), 'Plastic', 3.5, 10, 12.50),
-                ('Vitamin D3', 'Supplements', 'VIT001', (datetime.now() + timedelta(days=90)).date(), (datetime.now() - timedelta(days=200)).date(), 'Glass', 7.5, 300, 9.99),
-                ('Ibuprofen 400mg', 'Analgesics', 'IBU001', (datetime.now() + timedelta(days=5)).date(), (datetime.now() - timedelta(days=250)).date(), 'Paper', 8.0, 180, 7.50),
-                ('Metformin 500mg', 'Diabetes', 'MET001', (datetime.now() + timedelta(days=3)).date(), (datetime.now() - timedelta(days=180)).date(), 'Plastic', 3.5, 5, 8.75),
-                ('Omeprazole 20mg', 'Gastric', 'OMP001', (datetime.now() + timedelta(days=60)).date(), (datetime.now() - timedelta(days=150)).date(), 'Cardboard', 8.5, 220, 14.99),
+                ('Aspirin 500mg', 'Analgesics', 'ASP001', (datetime.now() + timedelta(days=2)).date(), 
+                 'Cardboard', 8.5, 150, 5.99),
+                ('Amoxicillin 250mg', 'Antibiotics', 'AMX001', (datetime.now() + timedelta(days=1)).date(), 
+                 'Plastic', 3.5, 10, 12.50),
+                ('Vitamin D3', 'Supplements', 'VIT001', (datetime.now() + timedelta(days=90)).date(), 
+                 'Glass', 7.5, 300, 9.99),
+                ('Ibuprofen 400mg', 'Analgesics', 'IBU001', (datetime.now() + timedelta(days=5)).date(), 
+                 'Paper', 8.0, 180, 7.50),
+                ('Metformin 500mg', 'Diabetes', 'MET001', (datetime.now() + timedelta(days=3)).date(), 
+                 'Plastic', 3.5, 5, 8.75),
+                ('Omeprazole 20mg', 'Gastric', 'OMP001', (datetime.now() + timedelta(days=60)).date(), 
+                 'Cardboard', 8.5, 220, 14.99),
+                ('Paracetamol 650mg', 'Pain Relief', 'PAR001', (datetime.now() + timedelta(days=45)).date(),
+                 'Paper', 8.0, 280, 6.50),
+                ('Cough Syrup', 'Cough Relief', 'COUGH001', (datetime.now() + timedelta(days=20)).date(),
+                 'Glass', 7.5, 95, 11.99),
             ]
             
             for product in sample_products:
                 try:
                     cursor.execute("""
-                        INSERT INTO products (name, category, barcode, expiry_date, mfg_date, packaging_type, eco_score, stock_quantity, price)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO products 
+                        (name, category, barcode, expiry_date, packaging_type, eco_score, stock_quantity, price)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     """, product)
                 except psycopg2.IntegrityError:
                     pass
             
             conn.commit()
-            print("✅ Sample data added successfully")
+            cursor.close()
+            logger.info("✓ Sample data added successfully")
         except Exception as e:
-            print(f"❌ Error adding sample data: {e}")
+            logger.error(f"✗ Error adding sample data: {e}")
             if conn:
                 conn.rollback()
     
     def close(self):
         """Close database connection"""
         self.disconnect()
-
-
-# ============================================================================
-# File: alert_manager.py - Fixed Alert Manager
-# ============================================================================
-
-class AlertManager:
-    """Manage pharmacy alerts (expiry, stock, etc)"""
-    
-    def __init__(self, db):
-        """Initialize with database instance"""
-        self.db = db
-    
-    def get_expiring_products(self, days=4):
-        """Get expiring products within specified days"""
-        try:
-            products = self.db.get_expiring_products(days=days)
-            print(f"✅ AlertManager: Found {len(products)} expiring products")
-            return products
-        except Exception as e:
-            print(f"❌ Error in get_expiring_products: {e}")
-            return []
-    
-    def get_low_stock_products(self, threshold=20):
-        """Get low stock products"""
-        try:
-            products = self.db.get_low_stock_products(threshold=threshold)
-            print(f"✅ AlertManager: Found {len(products)} low stock products")
-            return products
-        except Exception as e:
-            print(f"❌ Error in get_low_stock_products: {e}")
-            return []
-    
-    def check_expiring_alerts(self, days=4):
-        """Check and create alerts for expiring products"""
-        try:
-            expiring = self.get_expiring_products(days=days)
-            alerts = []
-            
-            for product in expiring:
-                try:
-                    # Parse date string
-                    expiry_str = product.get('expiry_date')
-                    if isinstance(expiry_str, str):
-                        expiry_date = datetime.strptime(expiry_str, '%Y-%m-%d').date()
-                    else:
-                        expiry_date = expiry_str
-                    
-                    days_left = (expiry_date - datetime.now().date()).days
-                    
-                    # Determine severity
-                    if days_left < 1:
-                        severity = 'critical'
-                    elif days_left < 3:
-                        severity = 'high'
-                    else:
-                        severity = 'warning'
-                    
-                    alerts.append({
-                        'product_id': product.get('id'),
-                        'product_name': product.get('name'),
-                        'type': 'expiry',
-                        'severity': severity,
-                        'message': f"{product.get('name')} expires in {days_left} days",
-                        'expiry_date': expiry_str
-                    })
-                except Exception as e:
-                    print(f"❌ Error processing product {product.get('name')}: {e}")
-                    continue
-            
-            return alerts
-        except Exception as e:
-            print(f"❌ Error in check_expiring_alerts: {e}")
-            return []
-    
-    def generate_reorder_suggestions(self):
-        """Generate product reorder suggestions based on stock and expiry"""
-        try:
-            low_stock = self.get_low_stock_products(threshold=50)
-            suggestions = []
-            
-            for product in low_stock:
-                suggestions.append({
-                    'product_id': product.get('id'),
-                    'product_name': product.get('name'),
-                    'current_stock': product.get('stock_quantity'),
-                    'suggested_reorder': int(product.get('stock_quantity', 0) * 2),
-                    'priority': 'high' if product.get('stock_quantity', 0) < 20 else 'medium'
-                })
-            
-            return suggestions
-        except Exception as e:
-            print(f"❌ Error in generate_reorder_suggestions: {e}")
-            return []
