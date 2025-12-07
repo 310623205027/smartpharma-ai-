@@ -186,11 +186,12 @@ class Database:
             logger.error(f"✗ Error fetching products: {e}")
             return []
     
-    def get_product_by_barcode(self, barcode):
+def get_product_by_barcode(self, barcode):
     """Get product by barcode"""
-    cursor = None
     try:
-        cursor = self.get_cursor()
+        conn = self.connect()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
         cursor.execute("""
             SELECT id, name, category, barcode, expiry_date, 
                    packaging_type, eco_score, stock_quantity, price
@@ -199,15 +200,12 @@ class Database:
         """, (barcode,))
         
         product = cursor.fetchone()
-        if product:
-            product_dict = dict(product)
-            if product_dict.get('expiry_date'):
-                product_dict['expiry_date'] = product_dict['expiry_date'].strftime('%Y-%m-%d')
-            logger.info(f"✓ Product found: {product_dict['name']}")
-            return product_dict
-        
-        logger.warning(f"✗ Product not found with barcode: {barcode}")
+        cursor.close()
+        return product
+    except Exception as e:
+        print("Error fetching product:", e)
         return None
+
     except Exception as e:
         logger.error(f"✗ Error fetching product by barcode: {e}")
         return None
