@@ -59,7 +59,6 @@ class Database:
         except Exception as e:
             logger.error(f"✗ Error disconnecting: {e}")
 
-    # Updated helper method to safely create a cursor
     def get_cursor(self):
         """Return a new cursor, ensuring the connection is alive"""
         conn = self.connect()
@@ -163,6 +162,7 @@ class Database:
                 cursor.close()
 
     def get_all_products(self):
+        """Retrieve all products"""
         cursor = None
         try:
             cursor = self.get_cursor()
@@ -185,190 +185,185 @@ class Database:
         except Exception as e:
             logger.error(f"✗ Error fetching products: {e}")
             return []
-    
-def get_product_by_barcode(self, barcode):
-    """Get product by barcode"""
-    try:
-        conn = self.connect()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        
-        cursor.execute("""
-            SELECT id, name, category, barcode, expiry_date, 
-                   packaging_type, eco_score, stock_quantity, price
-            FROM products 
-            WHERE barcode = %s
-        """, (barcode,))
-        
-        product = cursor.fetchone()
-        cursor.close()
-        return product
-    except Exception as e:
-        print("Error fetching product:", e)
-        return None
+        finally:
+            if cursor:
+                cursor.close()
 
-    except Exception as e:
-        logger.error(f"✗ Error fetching product by barcode: {e}")
-        return None
-    finally:
-        if cursor:
-            cursor.close()
+    def get_product_by_barcode(self, barcode):
+        """Get product by barcode"""
+        cursor = None
+        try:
+            cursor = self.get_cursor()
+            cursor.execute("""
+                SELECT id, name, category, barcode, expiry_date, 
+                       packaging_type, eco_score, stock_quantity, price
+                FROM products 
+                WHERE barcode = %s
+            """, (barcode,))
+            product = cursor.fetchone()
+            return product
+        except Exception as e:
+            logger.error(f"✗ Error fetching product by barcode: {e}")
+            return None
+        finally:
+            if cursor:
+                cursor.close()
 
-def get_product_by_id(self, product_id):
-    """Get product by ID"""
-    cursor = None
-    try:
-        cursor = self.get_cursor()
-        cursor.execute("""
-            SELECT id, name, category, barcode, expiry_date, 
-                   packaging_type, eco_score, stock_quantity, price
-            FROM products 
-            WHERE id = %s
-        """, (product_id,))
-        
-        product = cursor.fetchone()
-        if product:
-            product_dict = dict(product)
-            if product_dict.get('expiry_date'):
-                product_dict['expiry_date'] = product_dict['expiry_date'].strftime('%Y-%m-%d')
-            return product_dict
-        return None
-    except Exception as e:
-        logger.error(f"✗ Error fetching product by ID: {e}")
-        return None
-    finally:
-        if cursor:
-            cursor.close()
+    def get_product_by_id(self, product_id):
+        """Get product by ID"""
+        cursor = None
+        try:
+            cursor = self.get_cursor()
+            cursor.execute("""
+                SELECT id, name, category, barcode, expiry_date, 
+                       packaging_type, eco_score, stock_quantity, price
+                FROM products 
+                WHERE id = %s
+            """, (product_id,))
+            product = cursor.fetchone()
+            if product:
+                product_dict = dict(product)
+                if product_dict.get('expiry_date'):
+                    product_dict['expiry_date'] = product_dict['expiry_date'].strftime('%Y-%m-%d')
+                return product_dict
+            return None
+        except Exception as e:
+            logger.error(f"✗ Error fetching product by ID: {e}")
+            return None
+        finally:
+            if cursor:
+                cursor.close()
 
-def get_expiring_products(self, days=7):
-    """Get products expiring within specified days"""
-    cursor = None
-    try:
-        cursor = self.get_cursor()
-        future_date = (datetime.now() + timedelta(days=days)).date()
-        today = datetime.now().date()
-        
-        cursor.execute("""
-            SELECT id, name, category, barcode, expiry_date, 
-                   packaging_type, eco_score, stock_quantity, price
-            FROM products 
-            WHERE expiry_date <= %s AND expiry_date >= %s
-            AND stock_quantity > 0
-            ORDER BY expiry_date ASC
-        """, (future_date, today))
-        
-        products = cursor.fetchall()
-        result = []
-        for p in products:
-            product_dict = dict(p)
-            if product_dict.get('expiry_date'):
-                product_dict['expiry_date'] = product_dict['expiry_date'].strftime('%Y-%m-%d')
-            result.append(product_dict)
-        
-        logger.info(f"✓ Found {len(result)} expiring products")
-        return result
-    except Exception as e:
-        logger.error(f"✗ Error fetching expiring products: {e}")
-        return []
-    finally:
-        if cursor:
-            cursor.close()
+    def get_expiring_products(self, days=7):
+        """Get products expiring within specified days"""
+        cursor = None
+        try:
+            cursor = self.get_cursor()
+            future_date = (datetime.now() + timedelta(days=days)).date()
+            today = datetime.now().date()
+            
+            cursor.execute("""
+                SELECT id, name, category, barcode, expiry_date, 
+                       packaging_type, eco_score, stock_quantity, price
+                FROM products 
+                WHERE expiry_date <= %s AND expiry_date >= %s
+                AND stock_quantity > 0
+                ORDER BY expiry_date ASC
+            """, (future_date, today))
+            
+            products = cursor.fetchall()
+            result = []
+            for p in products:
+                product_dict = dict(p)
+                if product_dict.get('expiry_date'):
+                    product_dict['expiry_date'] = product_dict['expiry_date'].strftime('%Y-%m-%d')
+                result.append(product_dict)
+            
+            logger.info(f"✓ Found {len(result)} expiring products")
+            return result
+        except Exception as e:
+            logger.error(f"✗ Error fetching expiring products: {e}")
+            return []
+        finally:
+            if cursor:
+                cursor.close()
 
-def get_low_stock_products(self, threshold=50):
-    """Get products with low stock quantity"""
-    cursor = None
-    try:
-        cursor = self.get_cursor()
-        cursor.execute("""
-            SELECT id, name, category, barcode, expiry_date, 
-                   packaging_type, eco_score, stock_quantity, price
-            FROM products 
-            WHERE stock_quantity > 0 AND stock_quantity < %s
-            ORDER BY stock_quantity ASC
-        """, (threshold,))
-        
-        products = cursor.fetchall()
-        result = []
-        for p in products:
-            product_dict = dict(p)
-            if product_dict.get('expiry_date'):
-                product_dict['expiry_date'] = product_dict['expiry_date'].strftime('%Y-%m-%d')
-            result.append(product_dict)
-        
-        logger.info(f"✓ Found {len(result)} low stock products")
-        return result
-    except Exception as e:
-        logger.error(f"✗ Error fetching low stock products: {e}")
-        return []
-    finally:
-        if cursor:
-            cursor.close()
+    def get_low_stock_products(self, threshold=50):
+        """Get products with low stock quantity"""
+        cursor = None
+        try:
+            cursor = self.get_cursor()
+            cursor.execute("""
+                SELECT id, name, category, barcode, expiry_date, 
+                       packaging_type, eco_score, stock_quantity, price
+                FROM products 
+                WHERE stock_quantity > 0 AND stock_quantity < %s
+                ORDER BY stock_quantity ASC
+            """, (threshold,))
+            
+            products = cursor.fetchall()
+            result = []
+            for p in products:
+                product_dict = dict(p)
+                if product_dict.get('expiry_date'):
+                    product_dict['expiry_date'] = product_dict['expiry_date'].strftime('%Y-%m-%d')
+                result.append(product_dict)
+            
+            logger.info(f"✓ Found {len(result)} low stock products")
+            return result
+        except Exception as e:
+            logger.error(f"✗ Error fetching low stock products: {e}")
+            return []
+        finally:
+            if cursor:
+                cursor.close()
 
-def update_stock(self, product_id, quantity_change):
-    """Update product stock quantity"""
-    cursor = None
-    try:
-        cursor = self.get_cursor()
-        cursor.execute("""
-            UPDATE products 
-            SET stock_quantity = stock_quantity + %s,
-                updated_on = CURRENT_TIMESTAMP
-            WHERE id = %s
-            RETURNING stock_quantity
-        """, (quantity_change, product_id))
-        
-        new_stock = cursor.fetchone()
-        self.conn.commit()
-        
-        if new_stock:
-            logger.info(f"✓ Stock updated for product {product_id}: {new_stock['stock_quantity']} units")
-            return new_stock['stock_quantity']
-        return None
-    except Exception as e:
-        if self.conn:
-            self.conn.rollback()
-        logger.error(f"✗ Error updating stock: {e}")
-        return None
-    finally:
-        if cursor:
-            cursor.close()
-
-def add_sample_data(self):
-    """Add sample data for testing"""
-    cursor = None
-    try:
-        cursor = self.get_cursor()
-        cursor.execute("SELECT COUNT(*) AS count FROM products")
-        if cursor.fetchone()['count'] > 0:
-            logger.info("✓ Sample data already exists")
-            return
-        
-        sample_products = [
-            ('Aspirin 500mg', 'Analgesics', 'ASP001', (datetime.now() + timedelta(days=2)).date(), 'Cardboard', 8.5, 150, 5.99),
-            ('Amoxicillin 250mg', 'Antibiotics', 'AMX001', (datetime.now() + timedelta(days=1)).date(), 'Plastic', 3.5, 10, 12.50),
-            ('Vitamin D3', 'Supplements', 'VIT001', (datetime.now() + timedelta(days=90)).date(), 'Glass', 7.5, 300, 9.99),
-            ('Ibuprofen 400mg', 'Analgesics', 'IBU001', (datetime.now() + timedelta(days=5)).date(), 'Paper', 8.0, 180, 7.50),
-            ('Metformin 500mg', 'Diabetes', 'MET001', (datetime.now() + timedelta(days=3)).date(), 'Plastic', 3.5, 5, 8.75),
-            ('Omeprazole 20mg', 'Gastric', 'OMP001', (datetime.now() + timedelta(days=60)).date(), 'Cardboard', 8.5, 220, 14.99),
-            ('Paracetamol 650mg', 'Pain Relief', 'PAR001', (datetime.now() + timedelta(days=45)).date(), 'Paper', 8.0, 280, 6.50),
-            ('Cough Syrup', 'Cough Relief', 'COUGH001', (datetime.now() + timedelta(days=20)).date(), 'Glass', 7.5, 95, 11.99),
-        ]
-        
-        for product in sample_products:
-            try:
-                cursor.execute("""
-                    INSERT INTO products 
-                    (name, category, barcode, expiry_date, packaging_type, eco_score, stock_quantity, price)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, product)
-            except psycopg2.IntegrityError:
+    def update_stock(self, product_id, quantity_change):
+        """Update product stock quantity"""
+        cursor = None
+        try:
+            cursor = self.get_cursor()
+            cursor.execute("""
+                UPDATE products 
+                SET stock_quantity = stock_quantity + %s,
+                    updated_on = CURRENT_TIMESTAMP
+                WHERE id = %s
+                RETURNING stock_quantity
+            """, (quantity_change, product_id))
+            
+            new_stock = cursor.fetchone()
+            self.conn.commit()
+            
+            if new_stock:
+                logger.info(f"✓ Stock updated for product {product_id}: {new_stock['stock_quantity']} units")
+                return new_stock['stock_quantity']
+            return None
+        except Exception as e:
+            if self.conn:
                 self.conn.rollback()
-        
-        self.conn.commit()
-        logger.info("✓ Sample data added successfully")
-    except Exception as e:
-        logger.error(f"✗ Error adding sample data: {e}")
-        if self.conn:
-            self.conn.rollback()
-    finally:
-        if cursor:
-            cursor.close()
+            logger.error(f"✗ Error updating stock: {e}")
+            return None
+        finally:
+            if cursor:
+                cursor.close()
+
+    def add_sample_data(self):
+        """Add sample data for testing"""
+        cursor = None
+        try:
+            cursor = self.get_cursor()
+            cursor.execute("SELECT COUNT(*) AS count FROM products")
+            if cursor.fetchone()['count'] > 0:
+                logger.info("✓ Sample data already exists")
+                return
+            
+            sample_products = [
+                ('Aspirin 500mg', 'Analgesics', 'ASP001', (datetime.now() + timedelta(days=2)).date(), 'Cardboard', 8.5, 150, 5.99),
+                ('Amoxicillin 250mg', 'Antibiotics', 'AMX001', (datetime.now() + timedelta(days=1)).date(), 'Plastic', 3.5, 10, 12.50),
+                ('Vitamin D3', 'Supplements', 'VIT001', (datetime.now() + timedelta(days=90)).date(), 'Glass', 7.5, 300, 9.99),
+                ('Ibuprofen 400mg', 'Analgesics', 'IBU001', (datetime.now() + timedelta(days=5)).date(), 'Paper', 8.0, 180, 7.50),
+                ('Metformin 500mg', 'Diabetes', 'MET001', (datetime.now() + timedelta(days=3)).date(), 'Plastic', 3.5, 5, 8.75),
+                ('Omeprazole 20mg', 'Gastric', 'OMP001', (datetime.now() + timedelta(days=60)).date(), 'Cardboard', 8.5, 220, 14.99),
+                ('Paracetamol 650mg', 'Pain Relief', 'PAR001', (datetime.now() + timedelta(days=45)).date(), 'Paper', 8.0, 280, 6.50),
+                ('Cough Syrup', 'Cough Relief', 'COUGH001', (datetime.now() + timedelta(days=20)).date(), 'Glass', 7.5, 95, 11.99),
+            ]
+            
+            for product in sample_products:
+                try:
+                    cursor.execute("""
+                        INSERT INTO products 
+                        (name, category, barcode, expiry_date, packaging_type, eco_score, stock_quantity, price)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """, product)
+                except psycopg2.IntegrityError:
+                    self.conn.rollback()
+            
+            self.conn.commit()
+            logger.info("✓ Sample data added successfully")
+        except Exception as e:
+            logger.error(f"✗ Error adding sample data: {e}")
+            if self.conn:
+                self.conn.rollback()
+        finally:
+            if cursor:
+                cursor.close()
