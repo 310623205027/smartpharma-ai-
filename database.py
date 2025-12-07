@@ -11,16 +11,22 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class Database:
-    """Handle all database operations for SmartPharma AI"""
-    
     def __init__(self):
         """Initialize database connection parameters"""
-        self.host = os.getenv('DB_HOST', 'localhost')
-        self.user = os.getenv('DB_USER', 'postgres')
-        self.password = os.getenv('DB_PASSWORD', '2006')
-        self.database = os.getenv('DB_NAME', 'smartpharma_db')
-        self.port = int(os.getenv('DB_PORT', 5432))
-        self.conn = None
+        # Use Render's DATABASE_URL if available, otherwise fallback to local defaults
+        database_url = os.getenv('DATABASE_URL')
+        
+        if database_url:
+            self.conn = psycopg2.connect(database_url)
+        else:
+            # Local development fallback
+            self.conn = psycopg2.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                user=os.getenv('DB_USER', 'postgres'),
+                password=os.getenv('DB_PASSWORD', '2006'),
+                dbname=os.getenv('DB_NAME', 'smartpharma_db'),
+                port=int(os.getenv('DB_PORT', 5432))
+            )
     
     def connect(self):
         """Establish connection to PostgreSQL database"""
